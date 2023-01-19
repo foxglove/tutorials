@@ -1,0 +1,47 @@
+<?xml version="1.0"?>
+<robot name="foxbot">
+    <!-- Each frame is defined as a link with a name that defines the 'frame_id' -->
+    <link name="base_link">
+    <!-- Each link can contain a visual and collision tags -->
+        <visual name="">
+            <origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 0.0"/>
+            <geometry>
+                <box size="0.5 0.2 0.2"/>
+            </geometry>
+            <material name="">
+                <color rgba="0.43 0.23 0.9  1.0"/>
+            </material>
+        </visual>
+        <collision>
+            <origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 0.0"/>
+            <geometry>
+                <box size="0.5 0.2 0.2"/>
+            </geometry>
+        </collision>
+    </link>
+    <link name="sensor_link">
+        <visual name="">
+            <origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 0.0"/>
+            <geometry>
+                <box size="0.15 0.1 0.1"/>
+            </geometry>
+            <material name="">
+                <color rgba="0.3 0.2 1.0 1.0"/>
+            </material>
+        </visual>
+        <collision>
+            <origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 0.0"/>
+            <geometry>
+                <box size="0.15 0.1 0.1"/>
+            </geometry>
+        </collision>
+    </link>
+    <!-- A joint represents the transform between two frames (links) 
+    In this case, it is a fixed transform that will not change -->
+    <joint name="sensor_joint" type="fixed">
+        <origin xyz="2 1 0.0" rpy="0.0 0.0 -0.785"/>
+        <parent link="base_link"/>
+        <child link="sensor_link"/>
+    </joint>
+    
+</robot>
