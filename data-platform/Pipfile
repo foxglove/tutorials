@@ -1,0 +1,24 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+black = "*"
+foxglove-data-platform = "==0.2.3"
+folium = "*"
+isort = "*"
+jupyterlab = "*"
+jupyterlab_code_formatter = "*"
+matplotlib = "*"
+mcap = "*"
+mcap-ros1-support = "==0.4.0"
+mcap-ros2-support = "==0.1.0"
+numpy = "*"
+pandas = "*"
+pandasql = "*"
+
+[dev-packages]
+
+[requires]
+python_version = "3.8"
