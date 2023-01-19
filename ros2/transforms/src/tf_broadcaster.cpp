@@ -19,15 +19,15 @@ private:
 
 
     void tfTimer(){
-        // All transforms must be correctly time-stamped!
+        // All transforms must be correctly timestamped
         transf_.header.stamp = this->get_clock()->now();
-        tf2_broadcaster_->sendTransform(transf_);
+        tf_broadcaster_->sendTransform(transf_);
     }
 
-    // Declare a timer for the tf2_broadcaster
+    // Declare a timer for the tf_broadcaster_
     rclcpp::TimerBase::SharedPtr transform_timer_;
     // Declare the transforms broadcaster
-    std::unique_ptr<tf2_ros::TransformBroadcaster> tf2_broadcaster_;
+    std::unique_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster_;
     // Subscription for cmdVel
     rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr cmd_vel_sub_;
     // Declare the transform to broadcast
@@ -38,7 +38,7 @@ public:
     TfBroadcaster(const std::string & name):
     Node(name){
         // Initialize the transforms broadcaster
-        tf2_broadcaster_ = std::make_unique<tf2_ros::TransformBroadcaster>(*this);
+        tf_broadcaster_ = std::make_unique<tf2_ros::TransformBroadcaster>(*this);
         // Define the "parent" frame
         transf_.header.frame_id = "base_link";
         // Define the "child" frame
