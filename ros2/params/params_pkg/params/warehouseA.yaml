@@ -1,0 +1,5 @@
+/robot_node:
+  ros__parameters:
+    robot_name: "RobotA"
+    max_speed: 1.4
+    waypoints: ["Home", "Corridor", "Home"]

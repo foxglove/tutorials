@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<launch>
+
+    <!-- Three nodes -->
+    <node pkg="launch_pkg" type="sensor_node" name="sensor_node" output="screen"/>
+    <node pkg="launch_pkg" type="compute_node" name="compute_node" output="screen"/>
+    <node pkg="launch_pkg" type="motor_node" name="motor_node" output="screen"/>
+
+    <!-- Nodes with Namespace -->
+    <node ns="sense_think_act" pkg="launch_pkg" type="sensor_node" name="sensor_node" output="screen"/>
+    <node ns="sense_think_act" pkg="launch_pkg" type="compute_node" name="compute_node" output="screen"/>
+    <node ns="sense_think_act" pkg="launch_pkg" type="motor_node" name="motor_node" output="screen"/>
+    
+    <!-- Adding node from another package with parameters -->
+    <rosparam command="load" file="$(find params_pkg)/params/warehouseA_core.yaml" />
+    <node ns="core" pkg="params_pkg" type="robot_node" name="robot_node" output="screen"/>
+
+</launch>
