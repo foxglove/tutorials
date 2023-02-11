@@ -4,7 +4,7 @@
 class Sensor: public rclcpp::Node{
 private:
     void objectCallback(){
-        // All transforms must be correctly time-stamped!
+        // All transforms must be correctly timestamped!
         pose_.header.stamp = this->get_clock()->now();
         pose_.header.frame_id = "sensor_link";
         if(count_%2){
