@@ -4,11 +4,11 @@
 class Sensor: public rclcpp::Node{
 private:
     void objectCallback(){
-        // All transforms must be correctly timestamped!
+        // All transforms must be correctly timestamped
         pose_.header.stamp = this->get_clock()->now();
         pose_.header.frame_id = "sensor_link";
         
-        if(count_%2) {
+        if (count_%2) {
             pose_.pose.position.x = 1.0;
             pose_.pose.position.y = 1.0;
         } else {
@@ -31,11 +31,11 @@ private:
 
 public:
     Sensor(const std::string & name):Node(name){
-        // Initialization of timer for object detection
+        // Initialize timer for object detection
         object_timer_ = create_wall_timer(std::chrono::seconds(1), 
             std::bind(&Sensor::objectCallback, this));
 
-        // Initialization of pub for object detection
+        // Initialize publisher for object detection
         pose_pub_ = create_publisher<geometry_msgs::msg::PoseStamped>(
             "/detected_object",10);    
     }

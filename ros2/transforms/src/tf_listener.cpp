@@ -26,7 +26,7 @@ private:
             return;
         }
     }
-    // Subscription to the object’s pose published by sensor node
+    // Subscribe to pose published by sensor node
     rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr pose_sub_;
     // Transform listener
     std::shared_ptr<tf2_ros::TransformListener> tf_listener_;
@@ -43,7 +43,7 @@ public:
         tf_buffer_ = std::make_unique<tf2_ros::Buffer>(this->get_clock());
         // Make a transform listener of the buffer
         tf_listener_ = std::make_unique<tf2_ros::TransformListener>(*tf_buffer_);
-        // Inicialization of the timer that will check the transforms each second.
+        // Initialize timer that checks the transforms each second.
         pose_sub_ = create_subscription<geometry_msgs::msg::PoseStamped>
             ("/detected_object",10,
             std::bind(&TfListener::poseCallback, this, std::placeholders::_1));
