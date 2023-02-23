@@ -1,0 +1,183 @@
+{
+  "configById": {
+    "Publish!o5nlbh": {
+      "topicName": "/cmd_vel",
+      "datatype": "geometry_msgs/Twist",
+      "buttonText": "Publish",
+      "buttonTooltip": "",
+      "buttonColor": "#00A871",
+      "advancedView": true,
+      "value": "{\n  \"linear\": {\n    \"x\": 1,\n    \"y\": 1,\n    \"z\": 0\n  },\n  \"angular\": {\n    \"x\": 0,\n    \"y\": 0,\n    \"z\": 0\n  }\n}"
+    },
+    "RosOut!1iz5kjk": {
+      "searchTerms": [],
+      "minLogLevel": 1
+    },
+    "RawMessages!3fagkxe": {
+      "diffEnabled": false,
+      "diffMethod": "custom",
+      "diffTopicPath": "",
+      "showFullMessageForDiff": false,
+      "topicPath": "/tf"
+    },
+    "RawMessages!2vlq8nn": {
+      "diffEnabled": false,
+      "diffMethod": "custom",
+      "diffTopicPath": "",
+      "showFullMessageForDiff": false,
+      "topicPath": "/tf_static",
+      "expansion": {
+        "header~0~transforms": "c"
+      }
+    },
+    "3D!3wavhd1": {
+      "cameraState": {
+        "perspective": false,
+        "distance": 10.831031941028597,
+        "phi": 0.3651688601943065,
+        "thetaOffset": 90.27785392850286,
+        "targetOffset": [
+          1.5796739113967913,
+          -0.20119724635271527,
+          -2.0880804605368025e-16
+        ],
+        "target": [
+          0,
+          0,
+          0
+        ],
+        "targetOrientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "fovy": 45,
+        "near": 0.5,
+        "far": 5000
+      },
+      "followMode": "follow-pose",
+      "scene": {
+        "enableStats": true,
+        "transforms": {
+          "editable": false,
+          "showLabel": true,
+          "axisScale": 4.55491590949056,
+          "lineWidth": 3.5682068654084715,
+          "labelSize": 0.34824624306515595
+        },
+        "ignoreColladaUpAxis": false,
+        "labelScaleFactor": 0.6708105763477753,
+        "meshUpAxis": "y_up"
+      },
+      "transforms": {
+        "frame:head": {
+          "xyzOffset": [
+            0,
+            0,
+            -0.05
+          ],
+          "rpyOffset": [
+            0,
+            0,
+            0
+          ]
+        },
+        "frame:base_link": {
+          "visible": true
+        },
+        "frame:odom": {
+          "visible": true
+        },
+        "frame:head_link": {
+          "visible": true
+        },
+        "frame:left_wheel_link": {
+          "visible": false
+        },
+        "frame:right_wheel_link": {
+          "visible": false
+        }
+      },
+      "topics": {
+        "/robot_description": {
+          "visible": false
+        },
+        "/initialpose": {
+          "visible": false
+        },
+        "/goal_pose": {
+          "visible": false
+        },
+        "/detected_object": {
+          "visible": true,
+          "type": "arrow",
+          "axisScale": 1.2110365985079725,
+          "color": "#be6bff"
+        }
+      },
+      "layers": {
+        "75b9c4bf-c603-4684-9256-a0587c15cada": {
+          "visible": true,
+          "frameLocked": true,
+          "label": "Grid",
+          "instanceId": "75b9c4bf-c603-4684-9256-a0587c15cada",
+          "layerId": "foxglove.Grid",
+          "size": 10.926080284728402,
+          "divisions": 10.085300667219904,
+          "lineWidth": 1,
+          "color": "#248eff",
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "order": 1,
+          "frameId": "base_link"
+        }
+      },
+      "publish": {
+        "type": "pose",
+        "poseTopic": "/move_base_simple/goal",
+        "pointTopic": "/clicked_point",
+        "poseEstimateTopic": "/initialpose",
+        "poseEstimateXDeviation": 0.5,
+        "poseEstimateYDeviation": 0.5,
+        "poseEstimateThetaDeviation": 0.26179939
+      },
+      "followTf": "base_link"
+    }
+  },
+  "globalVariables": {},
+  "userNodes": {},
+  "linkedGlobalVariables": [],
+  "playbackConfig": {
+    "speed": 1
+  },
+  "layout": {
+    "direction": "row",
+    "first": {
+      "first": "Publish!o5nlbh",
+      "second": "RosOut!1iz5kjk",
+      "direction": "column",
+      "splitPercentage": 45
+    },
+    "second": {
+      "direction": "row",
+      "first": {
+        "first": "RawMessages!3fagkxe",
+        "second": "RawMessages!2vlq8nn",
+        "direction": "column",
+        "splitPercentage": 48.22834645669291
+      },
+      "second": "3D!3wavhd1",
+      "splitPercentage": 55.41678911972051
+    },
+    "splitPercentage": 34.884965222043874
+  }
+}
