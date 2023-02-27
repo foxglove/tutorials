@@ -1,0 +1,202 @@
+{
+  "configById": {
+    "Teleop!4jzfon5": {
+      "topic": "/cmd_vel",
+      "publishRate": 1,
+      "upButton": {
+        "field": "linear-x",
+        "value": 1
+      },
+      "downButton": {
+        "field": "linear-x",
+        "value": -1
+      },
+      "leftButton": {
+        "field": "linear-y",
+        "value": 1
+      },
+      "rightButton": {
+        "field": "linear-y",
+        "value": -1
+      }
+    },
+    "RosOut!3eh83nx": {
+      "searchTerms": [],
+      "minLogLevel": 1
+    },
+    "3D!3wavhd1": {
+      "cameraState": {
+        "perspective": false,
+        "distance": 6.160691967498433,
+        "phi": 5.879666910407072,
+        "thetaOffset": 89.43995542459047,
+        "targetOffset": [
+          2.1873308232196895,
+          -0.08552866958751416,
+          5.233685663977821e-17
+        ],
+        "target": [
+          0,
+          0,
+          0
+        ],
+        "targetOrientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "fovy": 45,
+        "near": 0.5,
+        "far": 5000
+      },
+      "followMode": "follow-pose",
+      "scene": {
+        "enableStats": true,
+        "transforms": {
+          "editable": false,
+          "showLabel": true,
+          "axisScale": 4.55491590949056,
+          "lineWidth": 3.5682068654084715,
+          "labelSize": 0.34824624306515595
+        },
+        "ignoreColladaUpAxis": false,
+        "labelScaleFactor": 0.6708105763477753,
+        "meshUpAxis": "y_up"
+      },
+      "transforms": {
+        "frame:head": {
+          "xyzOffset": [
+            0,
+            0,
+            -0.05
+          ],
+          "rpyOffset": [
+            0,
+            0,
+            0
+          ]
+        },
+        "frame:base_link": {
+          "visible": true
+        },
+        "frame:odom": {
+          "visible": true
+        },
+        "frame:head_link": {
+          "visible": true
+        },
+        "frame:left_wheel_link": {
+          "visible": false
+        },
+        "frame:right_wheel_link": {
+          "visible": false
+        },
+        "frame:sensor_link": {
+          "xyzOffset": [
+            0.637551724393037,
+            0,
+            0
+          ],
+          "rpyOffset": [
+            0,
+            0,
+            44.83294758548513
+          ]
+        },
+        "frame:arm_base_link": {
+          "xyzOffset": [
+            0.9507442148997916,
+            2.170909200114203,
+            0
+          ],
+          "rpyOffset": [
+            -37.670049163309926,
+            0,
+            0
+          ]
+        },
+        "frame:arm_end_link": {
+          "xyzOffset": [
+            -6.017110585136444,
+            -2.796204404623509,
+            0
+          ]
+        }
+      },
+      "topics": {
+        "/robot_description": {
+          "visible": false
+        },
+        "/initialpose": {
+          "visible": false
+        },
+        "/goal_pose": {
+          "visible": false
+        },
+        "/scan": {
+          "visible": false,
+          "colorField": "intensity",
+          "colorMode": "flat",
+          "colorMap": "turbo",
+          "pointSize": 4.726934793261838
+        },
+        "/detected_object": {
+          "visible": true,
+          "type": "arrow"
+        }
+      },
+      "layers": {
+        "2c6457b2-0b6d-4014-ae4f-462339a18539": {
+          "visible": true,
+          "frameLocked": true,
+          "label": "Grid",
+          "instanceId": "2c6457b2-0b6d-4014-ae4f-462339a18539",
+          "layerId": "foxglove.Grid",
+          "size": 10,
+          "divisions": 10,
+          "lineWidth": 1,
+          "color": "#248eff",
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "order": 1
+        }
+      },
+      "publish": {
+        "type": "pose",
+        "poseTopic": "/move_base_simple/goal",
+        "pointTopic": "/clicked_point",
+        "poseEstimateTopic": "/initialpose",
+        "poseEstimateXDeviation": 0.5,
+        "poseEstimateYDeviation": 0.5,
+        "poseEstimateThetaDeviation": 0.26179939
+      },
+      "followTf": "base_link"
+    }
+  },
+  "globalVariables": {},
+  "userNodes": {},
+  "linkedGlobalVariables": [],
+  "playbackConfig": {
+    "speed": 1
+  },
+  "layout": {
+    "direction": "row",
+    "first": {
+      "first": "Teleop!4jzfon5",
+      "second": "RosOut!3eh83nx",
+      "direction": "column",
+      "splitPercentage": 23.28899207543147
+    },
+    "second": "3D!3wavhd1",
+    "splitPercentage": 48.621836458489476
+  }
+}

@@ -7,6 +7,7 @@ private:
         // All transforms must be correctly timestamped
         pose_.header.stamp = this->get_clock()->now();
         pose_.header.frame_id = "sensor_link";
+
         if (count_%2) {
             pose_.pose.position.x = 1.0;
             pose_.pose.position.y = 1.0;
@@ -14,6 +15,7 @@ private:
             pose_.pose.position.x = 2.0;
             pose_.pose.position.y = 3.0;
         }
+
         // Change the detected object's position, depending on whether count_ is even or odd
         count_++;
         pose_pub_->publish(pose_);
