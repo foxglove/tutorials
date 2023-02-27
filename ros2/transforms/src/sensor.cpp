@@ -8,7 +8,7 @@ private:
         pose_.header.stamp = this->get_clock()->now();
         pose_.header.frame_id = "sensor_link";
 
-        if (count_%2) {
+        if (count_ % 2) {
             pose_.pose.position.x = 1.0;
             pose_.pose.position.y = 1.0;
         } else {
@@ -38,7 +38,7 @@ public:
 
         // Initialize publisher for object detection
         pose_pub_ = create_publisher<geometry_msgs::msg::PoseStamped>(
-            "/detected_object",10);    
+            "/detected_object", 10);    
     }
 
     ~Sensor(){}
