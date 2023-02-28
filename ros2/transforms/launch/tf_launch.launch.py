@@ -3,7 +3,6 @@ from launch.actions import ExecuteProcess
 from launch_ros.actions import Node
 
 def generate_launch_description():
-
   arm_frame_publisher = Node(
     package="tf2_ros",
     executable="static_transform_publisher",
