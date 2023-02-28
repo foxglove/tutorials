@@ -8,19 +8,23 @@ def generate_launch_description():
     executable="static_transform_publisher",
     arguments=["1", "1", "0", "0", "0", "0", "base_link", "arm_base_link"]
   )
+  
   sensor_frame_publisher = Node(
     package="tf2_ros",
     executable="static_transform_publisher",
     arguments=["1", "-1", "0", "0", "0", "0", "base_link", "sensor_link"]
   )
+  
   tf_broadcaster = Node(
     package="tf_pkg",
     executable="tf_broadcaster"
   )
+  
   tf_listener = Node(
     package="tf_pkg",
     executable="tf_listener"
   )
+  
   sensor_node = Node(
     package="tf_pkg",
     executable="sensor_node"
