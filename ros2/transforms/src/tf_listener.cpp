@@ -27,9 +27,9 @@ private:
     rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr pose_sub_;
     std::shared_ptr<tf2_ros::TransformListener> tf_listener_;
     std::shared_ptr<tf2_ros::Buffer> tf_buffer_;
-    // Pose in source frame
+    // Pose in source frame (`sensor_link`)
     geometry_msgs::msg::PoseStamped pose_in_;
-    // Pose in target frame
+    // Pose in target frame (`arm_end_link`)
     geometry_msgs::msg::PoseStamped pose_out_;
 
 public:
