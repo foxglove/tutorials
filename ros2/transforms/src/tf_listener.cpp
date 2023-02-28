@@ -10,7 +10,7 @@ private:
     void poseCallback(const geometry_msgs::msg::PoseStamped::SharedPtr msg){
         try {
             pose_in_ = *msg;
-            // Get all transforms between the source frame and target frame
+            // Transforms the pose between the source frame and target frame
             tf_buffer_->transform<geometry_msgs::msg::PoseStamped>(pose_in_, pose_out_, "arm_end_link", 
                 tf2::Duration(std::chrono::seconds(1)));
             // Log coordinates of pose in target frame
