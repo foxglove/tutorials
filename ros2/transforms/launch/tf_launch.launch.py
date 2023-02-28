@@ -2,7 +2,6 @@ from launch import LaunchDescription
 from launch.actions import ExecuteProcess
 from launch_ros.actions import Node
 
-# This function is always needed
 def generate_launch_description():
 
   arm_frame_publisher = Node(
