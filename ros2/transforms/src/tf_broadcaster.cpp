@@ -24,13 +24,10 @@ private:
         tf_broadcaster_->sendTransform(transf_);
     }
 
-    // Timer for the tf_broadcaster_
     rclcpp::TimerBase::SharedPtr transform_timer_;
-    // Transforms broadcaster
     std::unique_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster_;
-    // Subscription for cmdVel
     rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr cmd_vel_sub_;
-    // Declare the transform to broadcast
+    // Transform message to broadcast
     geometry_msgs::msg::TransformStamped transf_;
     
 
@@ -39,14 +36,14 @@ public:
     Node(name){
         // Initialize the transforms broadcaster
         tf_broadcaster_ = std::make_unique<tf2_ros::TransformBroadcaster>(*this);
-        // Define the "parent" frame
+        // Set frame
         transf_.header.frame_id = "arm_base_link";
-        // Define the "child" frame
+        // Set child frame
         transf_.child_frame_id = "arm_end_link";
-        // Initialize timer for publishing transform
+        // Initialize timer for broadcasting transforms every second
         transform_timer_ = create_wall_timer(std::chrono::seconds(1), 
             std::bind(&TfBroadcaster::tfTimer, this));
-        // Create subscriber for cmdVel
+        // Subscribe to the /cmd_vel topic
         cmd_vel_sub_ = create_subscription<geometry_msgs::msg::Twist>(
             "/cmd_vel",10,std::bind(&TfBroadcaster::armCallback, this, std::placeholders::_1));            
     }
