@@ -24,8 +24,11 @@ private:
             return;
         }
     }
+    // Subscription to pose published by sensor node
     rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr pose_sub_;
+    // Listener for the broadcast transform message
     std::shared_ptr<tf2_ros::TransformListener> tf_listener_;
+    // Buffer that stores several seconds of transforms for easy lookup by the listener
     std::shared_ptr<tf2_ros::Buffer> tf_buffer_;
     // Pose in source frame (`sensor_link`)
     geometry_msgs::msg::PoseStamped pose_in_;
