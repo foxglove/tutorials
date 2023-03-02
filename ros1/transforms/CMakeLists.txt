@@ -138,6 +138,8 @@ include_directories(
 ## The recommended prefix ensures that target names across packages don't collide
 # add_executable(${PROJECT_NAME}_node src/transforms_node.cpp)
 add_executable(tf_broadcaster src/tf_broadcaster.cpp)
+add_executable(sensor src/sensor.cpp)
+add_executable(tf_listener src/tf_listener.cpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -154,6 +156,12 @@ add_executable(tf_broadcaster src/tf_broadcaster.cpp)
 #   ${catkin_LIBRARIES}
 # )
 target_link_libraries(tf_broadcaster
+  ${catkin_LIBRARIES}
+)
+target_link_libraries(sensor
+  ${catkin_LIBRARIES}
+)
+target_link_libraries(tf_listener
   ${catkin_LIBRARIES}
 )
 #############

@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<launch>
+
+  <!-- Two static transforms publishers -->
+  <node pkg="tf2_ros" type="static_transform_publisher" name="sensor_link" args="1 -1 0 0 0 0 base_link sensor_link" />
+  <node pkg="tf2_ros" type="static_transform_publisher" name="arm_base_link" args="1 1 0 0 0 0 base_link arm_base_link" />
+
+  <!-- Three nodes from transform package-->
+  <node pkg="transforms" type="tf_broadcaster" name="tf_broadcaster" output="screen"/>
+  <node pkg="transforms" type="sensor" name="sensor" output="screen"/>
+  <node pkg="transforms" type="tf_listener" name="tf_listener" output="screen"/>
+
+  <!-- Foxglove Bridge node -->
+  <node pkg="foxglove_bridge" type="foxglove_bridge" name="foxglove_bridge" output="screen"/>
+
+</launch>
