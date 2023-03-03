@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.5)
-project(tf_pkg)
+project(transforms)
 
 # Default to C99
 if(NOT CMAKE_C_STANDARD)
@@ -26,11 +26,11 @@ find_package(tf2_geometry_msgs REQUIRED)
 find_package(foxglove_bridge REQUIRED)
 
 set(dependencies
-std_msgs
-tf2
-geometry_msgs
-tf2_ros
-tf2_geometry_msgs
+  std_msgs
+  tf2
+  geometry_msgs
+  tf2_ros
+  tf2_geometry_msgs
 )
 
 add_executable(tf_broadcaster src/tf_broadcaster.cpp)
@@ -40,25 +40,24 @@ ament_target_dependencies(tf_listener ${dependencies})
 add_executable(sensor_node src/sensor.cpp)
 ament_target_dependencies(sensor_node ${dependencies})
 
-
 install(TARGETS
   tf_listener
   tf_broadcaster
   sensor_node
-DESTINATION lib/${PROJECT_NAME})
+  DESTINATION lib/${PROJECT_NAME})
 
-install(DIRECTORY launch 
-DESTINATION share/${PROJECT_NAME})
-
+install(DIRECTORY launch
+  DESTINATION share/${PROJECT_NAME})
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
+
   # the following line skips the linter which checks for copyrights
   # uncomment the line when a copyright and license is not present in all source files
-  #set(ament_cmake_copyright_FOUND TRUE)
+  # set(ament_cmake_copyright_FOUND TRUE)
   # the following line skips cpplint (only works in a git repo)
   # uncomment the line when this package is not in a git repo
-  #set(ament_cmake_cpplint_FOUND TRUE)
+  # set(ament_cmake_cpplint_FOUND TRUE)
   ament_lint_auto_find_test_dependencies()
 endif()
 

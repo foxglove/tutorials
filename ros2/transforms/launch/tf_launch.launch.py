@@ -16,17 +16,17 @@ def generate_launch_description():
   )
   
   tf_broadcaster = Node(
-    package="tf_pkg",
+    package="transforms",
     executable="tf_broadcaster"
   )
   
   tf_listener = Node(
-    package="tf_pkg",
+    package="transforms",
     executable="tf_listener"
   )
   
   sensor_node = Node(
-    package="tf_pkg",
+    package="transforms",
     executable="sensor_node"
   )
 
