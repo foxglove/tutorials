@@ -1,0 +1,30 @@
+<?xml version="1.0"?>
+<launch>
+  <!-- Simulation with UR5e robot arm -->
+  <include file="$(find ur_gazebo)/launch/ur5e_bringup.launch">
+    <arg name="robot_description_file" value="$(find fg_gazebo_example)/launch/include/load_robot.launch" />
+  </include>
+
+  <!-- Moveit motion planning & execution -->
+  <include file="$(find ur5e_moveit_config)/launch/moveit_planning_execution.launch">
+    <arg name="sim" value="true" />
+  </include>
+
+  <!-- Spawn a static camera, not part of the robot's URDF -->
+  <include file="$(find fg_gazebo_example)/launch/include/spawn_static_camera.launch">
+    <arg name="camera_name" value="static_camera" />
+    <arg name="x"           value="1.0" />
+    <arg name="y"           value="0.5" />
+    <arg name="z"           value="1.0" />
+    <arg name="roll"        value="0.0" />
+    <arg name="pitch"       value="0.65" />
+    <arg name="yaw"         value="3.1416" />
+  </include>
+
+  <!-- Spawn a simple box with Foxglove logo -->
+  <node name="spawn_foxglove_box" pkg="gazebo_ros" type="spawn_model"
+        args="-model foxglove_box -urdf -f $(find fg_gazebo_example)/urdf/foxglove_box.urdf -y 1 -z 0.2 -Y -1.56" />
+
+  <!-- Foxglove bridge -->
+  <include file="$(find foxglove_bridge)/launch/foxglove_bridge.launch" />
+</launch>

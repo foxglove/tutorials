@@ -1,0 +1,13 @@
+<?xml version="1.0"?>
+<launch>
+  <include file="$(find fg_gazebo_example)/launch/include/load_robot.launch">
+    <arg name="joint_limit_params" default="$(find ur_description)/config/ur5e/joint_limits.yaml"/>
+    <arg name="kinematics_params" default="$(find ur_description)/config/ur5e/default_kinematics.yaml"/>
+    <arg name="physical_params" default="$(find ur_description)/config/ur5e/physical_parameters.yaml"/>
+    <arg name="visual_params" default="$(find ur_description)/config/ur5e/visual_parameters.yaml"/>
+  </include>
+
+  <node name="joint_state_publisher_gui" pkg="joint_state_publisher_gui" type="joint_state_publisher_gui" />
+  <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" />
+  <node name="rviz" pkg="rviz" type="rviz" args="-d $(find ur_description)/cfg/view_robot.rviz" required="true" />
+</launch>

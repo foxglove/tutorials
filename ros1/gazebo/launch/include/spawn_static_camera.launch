@@ -1,0 +1,29 @@
+<?xml version="1.0"?>
+<launch>
+  <arg name="camera_name" default="static_camera" />
+  <arg name="x"           default="0.0" />
+  <arg name="y"           default="0.0" />
+  <arg name="z"           default="0.0" />
+  <arg name="roll"        default="0.0" />
+  <arg name="pitch"       default="0.0" />
+  <arg name="yaw"         default="0.0" />
+
+  <group ns="$(arg camera_name)">
+    <param name="camera_description"
+           command="$(find xacro)/xacro '$(find fg_gazebo_example)/urdf/static_camera.urdf.xacro'
+                    camera_name:=$(arg camera_name)"
+    />
+
+    <node name="static_camera_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher">
+      <remap from="robot_description" to="camera_description" />
+    </node>
+
+    <node name="static_camera_tf" pkg="tf2_ros" type="static_transform_publisher"
+          args="$(arg x) $(arg y) $(arg z) $(arg roll) $(arg pitch) $(arg yaw) world $(arg camera_name)/camera_root_link" />
+  </group>
+
+  <node name="spawn_static_camera" pkg="gazebo_ros" type="spawn_model"
+        args="-model static_camera -urdf -param $(arg camera_name)/camera_description
+              -x $(arg x) -y $(arg y) -z $(arg z)
+              -R $(arg roll) -P $(arg pitch) -Y $(arg yaw)" />
+</launch>
