@@ -2,7 +2,7 @@
 
 Code reference for ROS 1 Gazebo simulation tutorial at https://foxglove.dev/blog/simulating-robotic-scenarios-with-gazebo-and-ros1.
 
-This catkin package contains launch and URDF files to run an example [Gazebo](https://gazebosim.org/) simulation consisting of a robotic arm (UR5e) with a robot mounted depth camera and a separate RGB camera. [Foxglove Studio](https://foxglove.dev/docs/studio) is used to visualize the robot model and other sensor data such as depth & RGB images.
+This `catkin` package contains launch and URDF files to run an example [Gazebo](https://gazebosim.org/) simulation consisting of a robotic arm (UR5e) with a robot mounted depth camera and a separate RGB camera. [Foxglove Studio](https://foxglove.dev/docs/studio) is used to visualize the robot model and other sensor data such as depth & RGB images.
 
 ![simulation screenshot](./assets/simulation.png)
 
