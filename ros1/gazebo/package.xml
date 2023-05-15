@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>fg_gazebo_example</name>
+  <version>0.0.0</version>
+  <description>Example gazebo simulation</description>
+  <maintainer email="info@foxglove.dev">Foxglove</maintainer>
+  <license>MIT</license>
+
+  <buildtool_depend>catkin</buildtool_depend>
+  <exec_depend>foxglove_bridge</exec_depend>
+  <exec_depend>gazebo_ros_control</exec_depend>
+  <exec_depend>gazebo_ros_pkgs</exec_depend>
+  <exec_depend>joint_state_publisher_gui</exec_depend>
+  <exec_depend>moveit_commander</exec_depend>
+  <exec_depend>robot_state_publisher</exec_depend>
+  <exec_depend>tf2_ros</exec_depend>
+  <exec_depend>ur_gazebo</exec_depend>
+  <exec_depend>ur5e_moveit_config</exec_depend>
+  <exec_depend>xacro</exec_depend>
+</package>

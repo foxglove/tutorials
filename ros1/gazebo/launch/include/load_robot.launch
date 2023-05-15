@@ -1,0 +1,28 @@
+<?xml version="1.0"?>
+<launch>
+  <arg name="robot_model" default="ur5e" />
+
+  <!--Parameter files -->
+  <arg name="joint_limit_params" />
+  <arg name="kinematics_params" />
+  <arg name="physical_params" />
+  <arg name="visual_params" />
+
+  <!--Common parameters  -->
+  <arg name="transmission_hw_interface" default="hardware_interface/EffortJointInterface" />
+  <arg name="safety_limits" default="false" />
+  <arg name="safety_pos_margin" default="0.15" />
+  <arg name="safety_k_position" default="20" />
+
+  <param name="robot_description" command="$(find xacro)/xacro '$(find fg_gazebo_example)/urdf/robot.xacro'
+    robot_model:=$(arg robot_model)
+    joint_limit_params:=$(arg joint_limit_params)
+    kinematics_params:=$(arg kinematics_params)
+    physical_params:=$(arg physical_params)
+    visual_params:=$(arg visual_params)
+    transmission_hw_interface:=$(arg transmission_hw_interface)
+    safety_limits:=$(arg safety_limits)
+    safety_pos_margin:=$(arg safety_pos_margin)
+    safety_k_position:=$(arg safety_k_position)"
+  />
+</launch>

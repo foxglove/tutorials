@@ -1,0 +1,24 @@
+<?xml version="1.0"?>
+<robot name="foxglove_block" xmlns:xacro="http://ros.org/wiki/xacro">
+  <link name="root_link">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="package://fg_gazebo_example/meshes/foxglove_box.dae" scale="0.05 0.05 0.05"/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="0.0 0.0 0.0" rpy="1.57 0 1.57"/>
+      <geometry>
+        <box size="0.4 0.1 0.1"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="0.564" />
+      <origin xyz="0 0 0" />
+      <inertia ixx="0.003881243" ixy="0.0" ixz="0.0"
+               iyy="0.000498940" iyz="0.0"
+               izz="0.003879257" />
+    </inertial>
+  </link>
+</robot>

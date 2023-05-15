@@ -1,0 +1,77 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://wiki.ros.org/xacro" name="ur5e_robot">
+  <xacro:include filename="$(find ur_gazebo)/urdf/ur_macro.xacro"/>
+  <xacro:include filename="$(find fg_gazebo_example)/urdf/kinect.urdf.xacro"/>
+
+  <xacro:arg name="joint_limit_params" default=""/>
+  <xacro:arg name="physical_params" default=""/>
+  <xacro:arg name="kinematics_params" default=""/>
+  <xacro:arg name="visual_params" default=""/>
+  <xacro:arg name="transmission_hw_interface" default="hardware_interface/EffortJointInterface"/>
+  <xacro:arg name="safety_limits" default="false"/>
+  <xacro:arg name="safety_pos_margin" default="0.15"/>
+  <xacro:arg name="safety_k_position" default="20"/>
+
+  <!-- Robot -->
+  <xacro:ur_robot_gazebo
+    prefix=""
+    joint_limits_parameters_file="$(arg joint_limit_params)"
+    kinematics_parameters_file="$(arg kinematics_params)"
+    physical_parameters_file="$(arg physical_params)"
+    visual_parameters_file="$(arg visual_params)"
+    transmission_hw_interface="$(arg transmission_hw_interface)"
+    safety_limits="$(arg safety_limits)"
+    safety_pos_margin="$(arg safety_pos_margin)"
+    safety_k_position="$(arg safety_k_position)"
+  />
+
+  <link name="world"/>
+  <joint name="world_joint" type="fixed">
+    <parent link="world"/>
+    <child link="podest"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+  </joint>
+
+  <xacro:property name="robot_spawn_z" default="0.1" />
+  <xacro:macro name="podest_visual_collision">
+    <origin xyz="0 0 ${-robot_spawn_z / 2}" rpy="0 0 0"/>
+    <geometry>
+      <cylinder radius="0.1" length="${robot_spawn_z}" />
+    </geometry>
+    <material name="darkgrey">
+      <color rgba="0.3 0.3 0.3 1.0"/>
+    </material>
+  </xacro:macro>
+
+  <!-- Small podest so it doesn't look like the robot is floating in the air -->
+  <link name="podest">
+    <visual>
+      <xacro:podest_visual_collision />
+    </visual>
+    <collision>
+      <xacro:podest_visual_collision />
+    </collision>
+  </link>
+
+  <gazebo reference="podest">
+    <material>Gazebo/DarkGrey</material>
+  </gazebo>
+
+  <joint name="podest_robot_joint" type="fixed">
+    <parent link="podest" />
+    <child link="base_link" />
+    <origin xyz="0 0 0" rpy="0 0 0" />
+  </joint>
+
+  <!-- Robot mounted kinect -->
+  <xacro:sensor_kinect
+    parent="tool0"
+    cam_px="0.1"
+    cam_py="-0.1"
+    cam_pz="0.01"
+    cam_or="0"
+    cam_op="${-pi/2}"
+    cam_oy="${pi/2}"
+  />
+
+</robot>
