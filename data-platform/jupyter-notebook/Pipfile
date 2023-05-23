@@ -5,7 +5,7 @@ name = "pypi"
 
 [packages]
 black = "*"
-foxglove-data-platform = "==0.2.3"
+foxglove-data-platform = "==0.6.0"
 folium = "*"
 isort = "*"
 jupyterlab = "*"
