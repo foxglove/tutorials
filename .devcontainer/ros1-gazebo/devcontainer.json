@@ -22,7 +22,7 @@
 	},
 	"forwardPorts": [6080],  // for noVNC clients
 	"remoteUser": "vscode",
-	"workspaceMount": "source=${localWorkspaceFolder}/ros/gazebo,target=/home/vscode/catkin_ws/src,type=bind",
+	"workspaceMount": "source=${localWorkspaceFolder}/ros1/gazebo,target=/home/vscode/catkin_ws/src,type=bind",
 	"workspaceFolder": "/home/vscode/catkin_ws",
 	"postCreateCommand": "./src/.devcontainer/start_caddy.sh && sudo chown -R vscode:vscode /home/vscode/catkin_ws && ln -s ${containerWorkspaceFolder}/src/.vscode ${containerWorkspaceFolder} && ./src/.devcontainer/build.sh"
 }

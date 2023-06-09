@@ -1,6 +1,6 @@
 (globals) {
 	encode gzip
-	
+
 	@http_scheme {
 		expression {http.request.scheme}=="https" || {header.X-Forwarded-Scheme}=="https" || {header.X-Forwarded-Proto}=="https"
 	}
