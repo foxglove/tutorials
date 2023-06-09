@@ -1,0 +1,22 @@
+{
+    "tasks": [
+        {
+            "label": "Roslaunch simulation.launch",
+            "type": "shell",
+            "command": "roslaunch fg_gazebo_example simulation.launch",
+            "problemMatcher": []
+        },
+        {
+            "label": "Rosrun move_viewpoints.py",
+            "type": "shell",
+            "command": "rosrun fg_gazebo_example move_viewpoints.py",
+            "problemMatcher": []
+        },
+        {
+            "label": "Start Foxglove Studio server",
+            "type": "shell",
+            "command": "caddy run --config ~/catkin_ws/src/mushr/.devcontainer/Caddyfile",
+            "problemMatcher": []
+        }
+    ]
+}
