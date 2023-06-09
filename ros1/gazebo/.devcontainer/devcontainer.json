@@ -1,6 +1,8 @@
 {
-	"name": "Foxglove Tutorials - Ros1 Gazebo",
-	"image": "osrf/ros:noetic-desktop-full",
+	"name": "Foxglove Tutorials - ROS1 Gazebo",
+	"build": {
+		"dockerfile": "Dockerfile"
+	},
 	"features": {
 		// see https://github.com/devcontainers/features/tree/main/src/common-utils
 		"ghcr.io/devcontainers/features/common-utils:2": {
@@ -15,11 +17,12 @@
 		"ghcr.io/devcontainers/features/desktop-lite:1": {
 			"webPort": 6080
 		},
-		"ghcr.io/devcontainers/features/docker-in-docker:2": {}
+		// for self-hosting Foxglove Studio
+		"ghcr.io/devcontainers-contrib/features/caddy:1": {}
 	},
-	"forwardPorts": [6080],  // for noVNC
+	"forwardPorts": [6080],  // for noVNC clients
 	"remoteUser": "vscode",
 	"workspaceMount": "source=${localWorkspaceFolder},target=/home/vscode/catkin_ws/src,type=bind",
 	"workspaceFolder": "/home/vscode/catkin_ws",
-	"postCreateCommand": "./src/.devcontainer/install.sh && sudo chown -R vscode:vscode /home/vscode/catkin_ws && ln -s ${containerWorkspaceFolder}/src/.vscode ${containerWorkspaceFolder} && ./src/.devcontainer/build.sh"
+	"postCreateCommand": "./src/.devcontainer/start_caddy.sh && sudo chown -R vscode:vscode /home/vscode/catkin_ws && ln -s ${containerWorkspaceFolder}/src/.vscode ${containerWorkspaceFolder} && ./src/.devcontainer/build.sh"
 }

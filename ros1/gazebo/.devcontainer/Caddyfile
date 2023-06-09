@@ -26,5 +26,9 @@
 	file_server
 
 	# serve foxglove studio
-    reverse_proxy @websockets "localhost:9090"
+    reverse_proxy @websockets "localhost:8765"
+
+	log {
+		output file /tmp/caddy.log
+	}
 }
