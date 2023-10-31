@@ -3,8 +3,6 @@
 #include <rclcpp_lifecycle/lifecycle_publisher.hpp>
 
 #include <lifecycle_msgs/msg/transition.hpp>
-#include <sensor_msgs/msg/image.hpp>
-#include <geometry_msgs/msg/twist.hpp>
 
 using LifecycleReturn=rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn;
 
