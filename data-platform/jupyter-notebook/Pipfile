@@ -14,11 +14,12 @@ matplotlib = "*"
 mcap = "*"
 mcap-ros1-support = "==0.4.0"
 mcap-ros2-support = "==0.1.0"
+mcap-protobuf-support = "==0.0.10"
 numpy = "*"
 pandas = "*"
-pandasql = "*"
+duckdb = "*"
 
 [dev-packages]
 
 [requires]
-python_version = "3.8"
+python_version = "3.11"
