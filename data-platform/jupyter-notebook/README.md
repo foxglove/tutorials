@@ -33,4 +33,4 @@ pipenv run jupyter-lab
 
 ## Stay in touch
 
-Join our [Slack channel](https://foxglove.dev/join-slack) to ask questions, share feedback, and stay up to date on what our team is working on.
+Join our [Slack channel](https://foxglove.dev/slack) to ask questions, share feedback, and stay up to date on what our team is working on.
