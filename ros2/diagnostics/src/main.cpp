@@ -49,12 +49,12 @@ private:
 
   // Callback to increase the timer count and publish the diagnostic
   void timer_callback() {
-    timer_count_ += 0.1;
+    timer_count_ += 1;
 
     update_self_status();
 
-    if (timer_count_ >= 10.0) {
-      timer_count_ = 0.0;
+    if (timer_count_ >= 10) {
+      timer_count_ = 1;
     }
 
     // Publish diagnostic array
@@ -119,7 +119,7 @@ private:
   diagnostic_msgs::msg::DiagnosticStatus topic_status_;
   diagnostic_msgs::msg::DiagnosticStatus self_status;
 
-  double timer_count_;
+  int timer_count_;
   int16_t value_;
   rclcpp::Time last_msg_time_;
 };
