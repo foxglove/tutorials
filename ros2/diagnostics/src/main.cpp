@@ -18,9 +18,9 @@ public:
         // Publisher for diagnostic array messages
         diagnostics_pub_ = create_publisher<diagnostic_msgs::msg::DiagnosticArray>("/diagnostics", 10);
 
-        // Subscriber to the Int16 topic
+        // Subscriber to the Int16 topic. We will use the value from this topic to add a DiagnosticStatus.
         topic_sub_ = create_subscription<std_msgs::msg::Int16>(
-            "/topic", 10, std::bind(&DiagnosticsPublisher::topic_callback, this, _1));
+            "/supervised_topic", 10, std::bind(&DiagnosticsPublisher::topic_callback, this, _1));
 
         // Timer to update status based on internal counter
         timer_ = create_wall_timer(100ms, std::bind(&DiagnosticsPublisher::timer_callback, this));
