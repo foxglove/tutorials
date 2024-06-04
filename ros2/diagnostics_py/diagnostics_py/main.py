@@ -4,6 +4,7 @@ from rclpy.qos import QoSProfile
 from std_msgs.msg import Int16
 from diagnostic_msgs.msg import DiagnosticArray, DiagnosticStatus, KeyValue
 
+
 class DiagnosticsPublisher(Node):
     def __init__(self) -> None:
         super().__init__('diagnostics_publisher')
@@ -14,16 +15,20 @@ class DiagnosticsPublisher(Node):
         qos_profile = QoSProfile(depth=10)
 
         # Publisher for diagnostic array messages
-        self.diagnostics_pub = self.create_publisher(DiagnosticArray, '/diagnostics', qos_profile)
+        self.diagnostics_pub = self.create_publisher(
+            DiagnosticArray, '/diagnostics', qos_profile)
 
-        # Subscriber to the Int16 topic
-        self.topic_sub = self.create_subscription(Int16, '/topic', self.topic_callback, qos_profile)
+        # Subscriber to the Int16 topic. We will use the value
+        # from this topic to add a DiagnosticStatus.
+        self.topic_sub = self.create_subscription(
+            Int16, '/supervised_topic', self.topic_callback, qos_profile)
 
         # Timer to update status based on internal counter
         self.timer = self.create_timer(0.1, self.timer_callback)
 
         # Timer to check for staleness
-        self.staleness_timer = self.create_timer(0.5, self.staleness_check_callback)
+        self.staleness_timer = self.create_timer(
+            0.5, self.staleness_check_callback)
 
         self.topic_status = DiagnosticStatus()
         self.self_status = DiagnosticStatus()
@@ -98,11 +103,13 @@ class DiagnosticsPublisher(Node):
             self.self_status.level = DiagnosticStatus.ERROR
             self.self_status.message = "90% completed"
 
+
 def main(args=None) -> None:
     rclpy.init(args=args)
     node = DiagnosticsPublisher()
     rclpy.spin(node)
     rclpy.shutdown()
+
 
 if __name__ == '__main__':
     main()
