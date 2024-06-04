@@ -3,9 +3,10 @@
 <package format="3">
   <name>diagnostics_py</name>
   <version>0.0.0</version>
-  <description>TODO: Package description</description>
-  <maintainer email="jlmv.96@gmail.com">jose</maintainer>
-  <license>TODO: License declaration</license>
+  <description>A diagnostics tutorial package</description>
+  <maintainer email="jlmv.96@gmail.com">Jose L Millán-Valbuena</maintainer>
+  <author>Jose L Millán-Valbuena/jlmv.96@gmail.com</author>
+  <license></license>
 
   <depend>rclpy</depend>
   <depend>std_msgs</depend>
