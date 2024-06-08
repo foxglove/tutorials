@@ -1,12 +1,12 @@
 <?xml version="1.0"?>
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
-  <name>diagnostics</name>
+  <name>diagnostics_publisher_cpp</name>
   <version>0.0.0</version>
-  <description>A diagnostics tutorial package</description>
+  <description>A package to publish a basic diagnostics message in C++</description>
   <maintainer email="jlmv.96@gmail.com">Jose L Millán-Valbuena</maintainer>
-  <author>Jose L Millán-Valbuena/jlmv.96@gmail.com</author>
-  <license></license>
+  <author email="jlmv.96@gmail.com">Jose L Millán-Valbuena</author>
+  <license>MPL</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
 
