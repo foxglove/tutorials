@@ -3,7 +3,7 @@
 <package format="3">
   <name>diagnostics</name>
   <version>0.0.0</version>
-  <description>A diagnostics tutorial package</description>
+  <description>A package to publish a basic diagnostics message</description>
   <maintainer email="jlmv.96@gmail.com">Jose L Millán-Valbuena</maintainer>
   <author email="jlmv.96@gmail.com">Jose L Millán-Valbuena</author>
   <license></license>
