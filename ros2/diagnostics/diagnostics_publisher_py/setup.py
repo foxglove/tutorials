@@ -1,6 +1,6 @@
 from setuptools import find_packages, setup
 
-package_name = 'diagnostics_py'
+package_name = 'diagnostics_publisher_py'
 
 setup(
     name=package_name,
@@ -13,14 +13,14 @@ setup(
     ],
     install_requires=['setuptools'],
     zip_safe=True,
-    maintainer='jose',
+    maintainer='José Luis Millán-Valbuena',
     maintainer_email='jlmv.96@gmail.com',
-    description='TODO: Package description',
-    license='TODO: License declaration',
+    description='A package to publish a basic diagnostics message in Python',
+    license='MPL',
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            "diagnostics_publisher_py=diagnostics_py.main:main",
+            "diagnostics_publisher_py=diagnostics_publisher_py.main:main",
         ],
     },
 )
