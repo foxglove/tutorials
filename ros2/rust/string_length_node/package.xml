@@ -1,10 +1,10 @@
 <package format="3">
   <name>string_length_node</name>
   <version>0.0.0</version>
-  <description>A basic tutorial using the rclrs</description>
+  <description>A package with an example for Rust in ROS 2</description>
   <maintainer email="jlmv.96@gmail.com">Jose L Millán-Valbuena</maintainer>
-  <author>Jose L Millán-Valbuena/jlmv.96@gmail.com</author>
-  <license></license>
+  <author email="jlmv.96@gmail.com">Jose L Millán-Valbuena</author>
+  <license>MPL</license>
 
   <depend>rclrs</depend>
   <depend>std_msgs</depend>
