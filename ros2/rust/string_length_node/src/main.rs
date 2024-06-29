@@ -19,7 +19,7 @@ impl StringLengthNode {
     fn new(context: &rclrs::Context) -> Result<Self, rclrs::RclrsError> {
         let node = rclrs::Node::new(context, "string_length_node")?;
         let data = Arc::new(Mutex::new(None));
-        let data_cb = Arc::clone(&data);
+        let data_cb = data.clone();
         let _subscription = node.create_subscription(
             "string_topic",
             rclrs::QOS_PROFILE_DEFAULT,
