@@ -9,7 +9,7 @@ use std_msgs::msg::UInt8 as UInt8Msg;
 struct StringLengthNode {
     node: Arc<rclrs::Node>,
     _subscription: Arc<rclrs::Subscription<StringMsg>>,
-    data: Arc<Mutex<Option<StringMsg>>>,
+    buffer: Arc<Mutex<Vec<Option<StringMsg>>>>,
     publisher: Arc<rclrs::Publisher<UInt8Msg>>,
 }
 
@@ -18,13 +18,14 @@ impl StringLengthNode {
     // This function is called when creating the node.
     fn new(context: &rclrs::Context) -> Result<Self, rclrs::RclrsError> {
         let node = rclrs::Node::new(context, "string_length_node")?;
-        let data = Arc::new(Mutex::new(None));
-        let data_cb = data.clone();
+        let buffer = Arc::new(Mutex::new(Vec::new()));
+        let buffer_cb = buffer.clone();
         let _subscription = node.create_subscription(
             "string_topic",
             rclrs::QOS_PROFILE_DEFAULT,
             move |msg: StringMsg| {
-                *data_cb.lock().unwrap() = Some(msg);
+                // Add the new message to a buffer
+                buffer_cb.lock().unwrap().push(Some(msg.clone()));
             },
         )?;
         let publisher = node.create_publisher("string_length", rclrs::QOS_PROFILE_DEFAULT)?;
@@ -33,16 +34,16 @@ impl StringLengthNode {
             node,
             _subscription,
             publisher,
-            data,
+            buffer,
         })
     }
 
     // This function is called when publishing
     fn publish(&self) -> Result<(), rclrs::RclrsError> {
-        // Get the latest data from the subscription
-        if let Some(s) = &*self.data.lock().unwrap() {
+        // Get the latest data from the subscription buffer
+        if let Some(s) = self.buffer.lock().unwrap().pop() {
             let mut length_msg = UInt8Msg { data: 0 };
-            length_msg.data = s.data.len() as u8;
+            length_msg.data = s.unwrap().data.len() as u8;
             self.publisher.publish(length_msg)?;
         }
         Ok(())
