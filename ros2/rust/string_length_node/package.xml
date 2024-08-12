@@ -1,0 +1,15 @@
+<package format="3">
+  <name>string_length_node</name>
+  <version>0.0.0</version>
+  <description>A package with an example for Rust in ROS 2</description>
+  <maintainer email="jlmv.96@gmail.com">Jose L Millán-Valbuena</maintainer>
+  <author email="jlmv.96@gmail.com">Jose L Millán-Valbuena</author>
+  <license>MPL</license>
+
+  <depend>rclrs</depend>
+  <depend>std_msgs</depend>
+
+  <export>
+    <build_type>ament_cargo</build_type>
+  </export>
+</package>
