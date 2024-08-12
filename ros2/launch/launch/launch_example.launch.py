@@ -3,6 +3,8 @@ from launch.actions import ExecuteProcess
 from launch_ros.actions import Node
 
 # This function is always needed
+
+
 def generate_launch_description():
 
     # Declare a variable Node for each node
@@ -26,19 +28,23 @@ def generate_launch_description():
         namespace="core",
         package="params_pkg",
         executable="robot_node",
-        parameters=[{"robot_name":"RobotA", 
-                     "max_speed":4.2, 
-                     "waypoints":["Home", "Room 1", "Corridor", "Home"]}]
+        parameters=[{"robot_name": "RobotA",
+                     "max_speed": 4.2,
+                     "waypoints": ["Home", "Room 1", "Corridor", "Home"]}]
     )
 
     # Launch Foxglove Studio to monitor data
     foxglove_studio = ExecuteProcess(cmd=["foxglove-studio"])
 
+    foxglove_bridge = ExecuteProcess(
+        cmd=["ros2", "launch", "foxglove_bridge", "foxglove_bridge_launch.xml"])
+
     # Add the nodes and the process to the LaunchDescription list
     ld = [compute_node,
           sensor_node,
           motor_node,
-          robot_node]
-          #foxglove_studio]
+          robot_node,
+          foxglove_studio,
+          foxglove_bridge]
 
     return LaunchDescription(ld)
