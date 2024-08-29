@@ -21,8 +21,8 @@ add_executable(diagnostics_publisher src/main.cpp)
 ament_target_dependencies(diagnostics_publisher ${dependencies})
 
 install(TARGETS
-diagnostics_publisher
-DESTINATION lib/${PROJECT_NAME}
+  diagnostics_publisher
+  DESTINATION lib/${PROJECT_NAME}
 )
 
 if(BUILD_TESTING)

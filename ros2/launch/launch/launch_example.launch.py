@@ -34,7 +34,7 @@ def generate_launch_description():
     )
 
     # Launch Foxglove Studio to monitor data
-    foxglove_studio = ExecuteProcess(cmd=["foxglove-studio"])
+    foxglove = ExecuteProcess(cmd=["foxglove-studio"])
 
     foxglove_bridge = ExecuteProcess(
         cmd=["ros2", "launch", "foxglove_bridge", "foxglove_bridge_launch.xml"])
@@ -44,7 +44,7 @@ def generate_launch_description():
           sensor_node,
           motor_node,
           robot_node,
-          foxglove_studio,
+          foxglove,
           foxglove_bridge]
 
     return LaunchDescription(ld)
