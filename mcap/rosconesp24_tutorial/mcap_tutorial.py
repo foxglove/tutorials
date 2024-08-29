@@ -1,10 +1,7 @@
-import csv
-import typing
 from pathlib import Path
 import os
 import json
 
-import numpy as np
 import pandas as pd
 
 from mcap.writer import Writer
@@ -17,19 +14,32 @@ SCHEMAS_PATH = os.path.join(os.path.dirname(
     os.path.abspath(__file__)), "schemas")
 
 
-# Open
+# Open CSV file with Pandas and convert timestamp to nanoseconds
 df = pd.read_csv(CSV_PATH)
 df["timestamp"] *= 1e9
 df["timestamp"] = df["timestamp"].astype("uint")
 print(df["timestamp"])
 
 
-def write_mcap(filename, data_list):
+def write_mcap(filename, data_list) -> None:
+    """
+    Generates a MCAP file with the topics in data_list
+    filename: filename for the output file
+    data_list: list of dictionaries with the following structure:
+        {
+            "name": topic_name,
+            "data": list of values,
+            "schema": schema name
+        }
+    """
+
     with open(os.path.join(OUTPUT_PATH, filename+".mcap"), "wb") as f:
         writer = Writer(f)
         writer.start("x-jsonschema")
 
+        # Iterate over the list of topics
         for topic in data_list:
+            # Get topic elements
             topic_name = topic["name"]
             topic_data = topic["data"]
             schema_name = topic["schema"]
@@ -50,6 +60,7 @@ def write_mcap(filename, data_list):
             # To show progress
             last_print = 0
 
+            # Iterate over the values with timestamp
             for i, (data) in enumerate(topic_data["values"]):
                 writer.add_message(
                     channel_id,
@@ -57,6 +68,7 @@ def write_mcap(filename, data_list):
                     data=json.dumps(data).encode("utf-8"),
                     publish_time=topic_data["timestamp"][i])
 
+                # Update progress
                 current_percentage = round(i/len(topic_data["values"])*100, 2)
                 if current_percentage-last_print > 5:
                     print(f"{current_percentage} %")
@@ -65,7 +77,9 @@ def write_mcap(filename, data_list):
         writer.finish()
 
 
+# List of topics
 data_combined = []
+
 # Prepare battery data
 battery_data = {
     "timestamp": df["timestamp"],
@@ -121,5 +135,6 @@ location = {
     "schema": "LocationFix"
 }
 data_combined.append(location)
+
 
 write_mcap("tutorial", data_combined)
