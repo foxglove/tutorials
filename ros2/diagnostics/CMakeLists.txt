@@ -12,9 +12,9 @@ find_package(diagnostic_msgs REQUIRED)
 find_package(std_msgs REQUIRED)
 
 set(dependencies
-rclcpp
-diagnostic_msgs
-std_msgs
+  rclcpp
+  diagnostic_msgs
+  std_msgs
 )
 
 add_executable(diagnostics_publisher src/main.cpp)
