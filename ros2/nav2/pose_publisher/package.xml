@@ -3,9 +3,9 @@
 <package format="3">
   <name>pose_publisher</name>
   <version>0.0.0</version>
-  <description>TODO: Package description</description>
+  <description>PoseStamped republisher with simulation time</description>
   <maintainer email="jlmv.96@gmail.com">jose</maintainer>
-  <license>TODO: License declaration</license>
+  <license>MPL</license>
 
   <test_depend>ament_copyright</test_depend>
   <test_depend>ament_flake8</test_depend>

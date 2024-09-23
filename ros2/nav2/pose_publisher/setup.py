@@ -15,8 +15,8 @@ setup(
     zip_safe=True,
     maintainer='jose',
     maintainer_email='jlmv.96@gmail.com',
-    description='TODO: Package description',
-    license='TODO: License declaration',
+    description='PoseStamped republisher with simulation time',
+    license='MPL',
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
