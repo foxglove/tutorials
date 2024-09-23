@@ -1,0 +1,12 @@
+{
+    "title": "foxglove.Battery",
+    "description": "Battery topic",
+    "$comment": "",
+    "type": "object",
+    "properties": {
+        "percentage": {
+            "type": "number",
+            "description": "remaining battery"
+        }
+    }
+}

@@ -1,0 +1,93 @@
+{
+  "configById": {
+    "Plot!1bnjw7b": {
+      "paths": [
+        {
+          "timestampMethod": "receiveTime",
+          "value": "speed.x",
+          "enabled": true,
+          "color": "#4e98e2"
+        },
+        {
+          "timestampMethod": "receiveTime",
+          "value": "speed.y",
+          "enabled": true,
+          "color": "#f5774d"
+        },
+        {
+          "timestampMethod": "receiveTime",
+          "value": "speed.z",
+          "enabled": true,
+          "color": "#f7df71"
+        }
+      ],
+      "showXAxisLabels": true,
+      "showYAxisLabels": true,
+      "showLegend": false,
+      "legendDisplay": "floating",
+      "showPlotValuesInLegend": false,
+      "isSynced": true,
+      "xAxisVal": "timestamp",
+      "sidebarDimension": 240
+    },
+    "Plot!1jzavz7": {
+      "paths": [
+        {
+          "timestampMethod": "receiveTime",
+          "value": "battery.percentage",
+          "enabled": true,
+          "color": "#4e98e2"
+        }
+      ],
+      "showXAxisLabels": true,
+      "showYAxisLabels": true,
+      "showLegend": true,
+      "legendDisplay": "floating",
+      "showPlotValuesInLegend": false,
+      "isSynced": true,
+      "xAxisVal": "timestamp",
+      "sidebarDimension": 240
+    },
+    "map!34tfall": {
+      "zoomLevel": 21,
+      "center": {
+        "lat": 37.355,
+        "lon": -5.938
+      },
+      "customTileUrl": "",
+      "disabledTopics": [],
+      "followTopic": "",
+      "layer": "map",
+      "topicColors": {
+        "location": "#fc0000"
+      },
+      "maxNativeZoom": 18,
+      "topicConfig": {
+        "location": {
+          "historyMode": "all",
+          "pointDisplayMode": "dot",
+          "color": "#fc0000"
+        }
+      }
+    },
+    "SourceInfo!4je793n": {}
+  },
+  "globalVariables": {},
+  "userNodes": {},
+  "playbackConfig": {
+    "speed": 1
+  },
+  "layout": {
+    "first": {
+      "first": "SourceInfo!4je793n",
+      "second": "Plot!1bnjw7b",
+      "direction": "column"
+    },
+    "second": {
+      "first": "Plot!1jzavz7",
+      "second": "map!34tfall",
+      "direction": "column"
+    },
+    "direction": "row"
+  }
+}
