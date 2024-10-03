@@ -5,7 +5,8 @@ In this case, each variable is treated individually, one MCAP file is generated 
 
 # Download the dataset
 
-1. Download the dataset from [NASA Valkyrie Box Pickup](https://repository.library.northeastern.edu/files/neu:m041tz63c)
+1. The required file **is already included** in this repo, but if you want you can download the dataset from [NASA Valkyrie Box Pickup](https://repository.library.northeastern.edu/files/neu:m041tz63c).
+
 
 # Generate CSV
 
