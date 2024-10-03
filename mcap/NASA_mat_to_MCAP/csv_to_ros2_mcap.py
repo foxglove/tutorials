@@ -4,7 +4,6 @@ from pathlib import Path
 import os
 import json
 from inflection import underscore
-from math import modf
 
 try:
     from foxglove_msgs.msg import Vector2
