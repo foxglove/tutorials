@@ -5,32 +5,32 @@ import csv
 import base64
 import json
 import cv2
-import yaml
 
 import numpy as np
 
 from mcap.writer import Writer
 from mcap.well_known import SchemaEncoding, MessageEncoding
 
+# Define paths
 ROOT_PATH = os.path.dirname(os.path.abspath(__file__))
-
 PATH_TO_CSV_FILE = Path(
-    os.path.join(ROOT_PATH, "DATA/EstimatedState.csv"))
+    os.path.join(ROOT_PATH, "DATA", "EstimatedState.csv"))
 PATH_TO_IMAGES_FOLDER = Path(
-    os.path.join(ROOT_PATH, "DATA/Cam0_images"))
+    os.path.join(ROOT_PATH, "DATA", "Cam0_images"))
 PATH_TO_GRAY_FOLDER = Path(
-    os.path.join(ROOT_PATH, "DATA/Cam1_images"))
+    os.path.join(ROOT_PATH, "DATA", "Cam1_images"))
 PATH_TO_SEGMENT_FOLDER = Path(
-    os.path.join(ROOT_PATH, "DATA/Segmentation"))
+    os.path.join(ROOT_PATH, "DATA", "Segmentation"))
 PATH_TO_HF_FOLDER = Path(
-    os.path.join(ROOT_PATH, "DATA/SSS_HF_images"))
+    os.path.join(ROOT_PATH, "DATA", "SSS_HF_images"))
 PATH_TO_LF_FOLDER = Path(
-    os.path.join(ROOT_PATH, "DATA/SSS_LF_images"))
+    os.path.join(ROOT_PATH, "DATA", "SSS_LF_images"))
 PATH_TO_OUTPUT_FOLDER = Path(
     os.path.join(ROOT_PATH, "output"))
 PATH_TO_VIDEO_FOLDER = Path(
     os.path.join(ROOT_PATH, "video"))
 
+# Create output paths
 if not os.path.exists(PATH_TO_OUTPUT_FOLDER):
     os.mkdir(PATH_TO_OUTPUT_FOLDER)
 
@@ -42,10 +42,12 @@ def data_reader(csv_path: typing.Union[str, Path]):
     """ Reads data from a CSV file with predefined header """
     with open(csv_path, "r", encoding="utf-8") as f:
         for image_path, timestamp, lat, lon, est_depth, _, _, _, _, _, _, _, _, press, _, _, _, _, _, _, q, r, depth, alt in csv.reader(f):
+            # Discard first row
             if image_path == "image":
                 print("Header row")
                 continue
-            image = image_path.split('/')[-1]
+
+            image = os.path.basename(image_path)
             yield (timestamp, image, float(lat), float(lon), float(est_depth), float(press), float(q), float(r), float(depth), float(alt))
 
 
