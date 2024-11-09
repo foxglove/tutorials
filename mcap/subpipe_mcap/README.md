@@ -1,5 +1,7 @@
 # Subpipe dataset to MCAP
 
+![Subpipe](subpipe.gif)
+
 ## First steps
 
 1. Download the dataset from [here](https://zenodo.org/records/12666132). 
@@ -12,4 +14,4 @@
     * `convert_csv2mcap.py`
     * ...
 
-## Files descriptions
+3. Run the script `convert_csv2mcap.py`. The MCAP file will be generated in an `output` folder.

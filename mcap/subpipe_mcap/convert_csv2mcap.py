@@ -147,11 +147,22 @@ def get_state(csv_path: typing.Union[str, Path]) -> dict:
         # GoPro
         cam0_paths.append((row["timestamp"], os.path.join(
             PATH_TO_IMAGES_FOLDER, os.path.basename(row["image"]))))
-        cam0_info.append((row["timestamp"], calibration))
+        calib_val = {
+            "timestamp": row["timestamp"],
+            "frame_id": calibration["frame_id"],
+            "width": calibration["width"],
+            "height": calibration["height"],
+            "distortion_model": calibration["distortion_model"],
+            "D": calibration["D"],
+            "K": calibration["K"],
+            "R": calibration["R"],
+            "P": calibration["P"],
+        }
+        cam0_info.append((row["timestamp"], calib_val))
 
     # Gray images
     for file in os.listdir(PATH_TO_GRAY_FOLDER):
-        timestamp = file.replace(".jpg", "")
+        timestamp = float(file.replace(".jpg", ""))
         cam1_paths.append((timestamp, os.path.join(PATH_TO_GRAY_FOLDER, file)))
 
     # SSS HF images
