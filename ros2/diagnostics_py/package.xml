@@ -3,9 +3,9 @@
 <package format="3">
   <name>diagnostics_py</name>
   <version>0.0.0</version>
-  <description>TODO: Package description</description>
+  <description>Diagnostics basic usage tutorial in Python</description>
   <maintainer email="jlmv.96@gmail.com">jose</maintainer>
-  <license>TODO: License declaration</license>
+  <license>MPL</license>
 
   <depend>rclpy</depend>
   <depend>std_msgs</depend>

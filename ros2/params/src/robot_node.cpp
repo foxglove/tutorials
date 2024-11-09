@@ -20,7 +20,7 @@ public:
         // Declare parameters
         declare_parameter("robot_name", "");
         declare_parameter("max_speed", 0.0);
-        declare_parameter("waypoints");
+        declare_parameter("waypoints", rclcpp::PARAMETER_STRING_ARRAY);
 
         // Read parameters
         get_parameter("robot_name", robot_name_);
