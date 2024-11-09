@@ -1,0 +1,53 @@
+{
+    "gopro":{
+        "timestamp": 1693573934.918000000,
+        "parent_frame_id": "base_link" ,
+        "child_frame_id": "gopro_link",
+        "translation":{
+            "x": 0.619,
+            "y":  0.0,
+            "z":  -0.120
+        },
+        "rotation":{
+            "x": 0.883,
+            "y": 0,
+            "z": 0,
+            "w": -0.469
+        }
+    },
+    
+    "gray": {
+        "timestamp": 1693573934.918000000,
+        "parent_frame_id": "base_link" ,
+        "child_frame_id": "gray_link",
+        "translation":{
+            "x": -0.813,
+            "y": 0.0,
+            "z": -0.45
+        },
+        "rotation":{
+            "x": 0.707,
+            "y": 0,
+            "z": 0,
+            "w": -0.707
+        }
+    },
+    
+    "sss": {
+        "timestamp": 1693573934.918000000,
+        "parent_frame_id": "base_link" ,
+        "child_frame_id": "sss_link",
+        "translation":{
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+        },
+        "rotation":{
+            "x": 0.707,
+            "y": 0,
+            "z": 0,
+            "w": -0.707
+        }
+    }
+}
+
