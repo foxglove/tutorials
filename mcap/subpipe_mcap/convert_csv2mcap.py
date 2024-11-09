@@ -6,6 +6,7 @@ import base64
 import json
 import cv2
 
+import pandas as pd
 import numpy as np
 
 from mcap.writer import Writer
@@ -15,6 +16,10 @@ from mcap.well_known import SchemaEncoding, MessageEncoding
 ROOT_PATH = os.path.dirname(os.path.abspath(__file__))
 PATH_TO_CSV_FILE = Path(
     os.path.join(ROOT_PATH, "DATA", "EstimatedState.csv"))
+PATH_TO_PRESSURE_DEPTH_FILE = Path(
+    os.path.join(ROOT_PATH, "DATA", "Pressure.csv"))
+PATH_TO_SCHEMA_FOLDER = Path(
+    os.path.join(ROOT_PATH, "schemas"))
 PATH_TO_IMAGES_FOLDER = Path(
     os.path.join(ROOT_PATH, "DATA", "Cam0_images"))
 PATH_TO_GRAY_FOLDER = Path(
@@ -38,95 +43,136 @@ if not os.path.exists(PATH_TO_VIDEO_FOLDER):
     os.mkdir(PATH_TO_VIDEO_FOLDER)
 
 
-# def data_reader(csv_path: typing.Union[str, Path]):
-#     """ Reads data from a CSV file with predefined header """
-#     with open(csv_path, "r", encoding="utf-8") as f:
-#         for image_path, timestamp, lat, lon, est_depth, _, _, _, _, _, _, _, _, press, _, _, _, _, _, _, q, r, depth, alt in csv.reader(f):
-#             # Discard first row
-#             if image_path == "image":
-#                 print("Header row")
-#                 continue
-
-#             image = os.path.basename(image_path)
-#             yield (timestamp, image, float(lat), float(lon), float(est_depth), float(press), float(q), float(r), float(depth), float(alt))
-
-
-def data_reader(csv_path: typing.Union[str, Path]):
+def data_reader(csv_path: typing.Union[str, Path]) -> pd.DataFrame:
     """ Function to read from csv file and yield each value """
-    with open(csv_path, "r", encoding="utf-8") as csv_file:
-        for i, csv_data in enumerate(csv.reader(csv_file)):
+    df = pd.read_csv(csv_path)
+    df.columns = df.columns.str.replace(' ', '')
+    return df
 
-            yield csv_data[0]
 
+def get_pressure_depth(csv_path: typing.Union[str, Path]) -> list:
+    df = data_reader(csv_path)
+    pressure_and_depth_values = []
 
-def add_location_press_depth():
-    locations = []
-    press_depth = []
-
-    for timestamp, image, lat, lon, est_depth, press, q, r, depth, alt in data_reader(PATH_TO_CSV_FILE):
+    for _, row in df.iterrows():
         press_depth_val = {
-            "x": press,
-            "y": depth,
+            "pressure": float(row["value(hpa)"]),
+            "depth": float(row["est-depth"]),
         }
-        press_depth.append(press_depth_val)
+        pressure_and_depth_values.append((row["timestamp"], press_depth_val))
 
+    return pressure_and_depth_values
+
+
+def get_state(csv_path: typing.Union[str, Path]) -> dict:
+    df = data_reader(csv_path)
+    state_topics = {}
+
+    location_values = []
+    velocity_values = []
+    position_values = []
+    images_path = []
+
+    for _, row in df.iterrows():
+        # Location
         loc_val = {
-            "timestamp": timestamp,
-            "frame_id": "LAUV",
-            "latitude": lat,
-            "longitude": lon,
-            "altitude": alt,
-            "position_covariance": list(np.zeros(9)),
-            "position_covariance_type": 0,
+            "latitude": float(row["est-latitude"]),
+            "longitude": float(row["est-longitude"]),
+            "altitude": float(row["alt(m)"])
         }
-        locations.append(loc_val)
+        location_values.append((row["timestamp"], loc_val))
 
-    assert len(locations) == len(press_depth)
+        # Velocity
+        velocity_val = {
+            "x": float(row["vx(m/s)"]),
+            "y": float(row["vy(m/s)"]),
+            "z": float(row["vz(m/s)"])
+        }
+        velocity_values.append((row["timestamp"], velocity_val))
 
+        # Position
+        position_val = {
+            "x": float(row["x(m)"]),
+            "y": float(row["y(m)"]),
+            "z": float(row["z(m)"])
+        }
+        position_values.append((row["timestamp"], position_val))
+
+        # GoPro
+        images_path.append((row["timestamp"], os.path.join(
+            PATH_TO_IMAGES_FOLDER, os.path.basename(row["image"]))))
+
+    state_topics["location"] = location_values
+    state_topics["velocity"] = velocity_values
+    state_topics["position"] = position_values
+    state_topics["cam0"] = images_path
+
+    return state_topics
+
+
+def generate_channel_id(channels: dict, writer: Writer, json_name: str, topic: str):
+    with open(os.path.join(PATH_TO_SCHEMA_FOLDER, json_name+".json"), "rb") as f:
+        schema = f.read()
+        pressure_schema_id = writer.register_schema(
+            name="foxglove."+json_name,
+            encoding=SchemaEncoding.JSONSchema,
+            data=schema)
+        pressure_channel_id = writer.register_channel(
+            topic=topic,
+            message_encoding=MessageEncoding.JSON,
+            schema_id=pressure_schema_id)
+        channels[topic] = pressure_channel_id
+
+
+def write_mcap(topics: dict):
+    # Open mcap file to write
     with open(os.path.join(PATH_TO_OUTPUT_FOLDER, "subpipe.mcap"), "wb") as f:
         writer = Writer(f)
         writer.start("x-jsonschema")
 
-        with open(Path(__file__).parent / "LocationFix.json", "rb") as f:
-            schema = f.read()
-            location_schema_id = writer.register_schema(
-                name="foxglove.LocationFix",
-                encoding=SchemaEncoding.JSONSchema,
-                data=schema)
-        with open(Path(__file__).parent / "Vector2.json", "rb") as f:
-            schema = f.read()
-            pressure_schema_id = writer.register_schema(
-                name="foxglove.Vector2",
-                encoding=SchemaEncoding.JSONSchema,
-                data=schema)
+        # Generate channels for each topic
+        channels = {}
+        generate_channel_id(
+            channels, writer, "PressureDepth", "pressure_depth")
+        generate_channel_id(
+            channels, writer, "LocationFix", "location")
+        generate_channel_id(
+            channels, writer, "Vector3", "velocity")
+        generate_channel_id(
+            channels, writer, "Vector3", "position")
+        generate_channel_id(
+            channels, writer, "CompressedImage", "cam0")
 
-        location_channel_id = writer.register_channel(
-            topic="location_fix",
-            message_encoding=MessageEncoding.JSON,
-            schema_id=location_schema_id)
-        pressure_channel_id = writer.register_channel(
-            topic="pressure_depth",
-            message_encoding=MessageEncoding.JSON,
-            schema_id=pressure_schema_id)
+        # Write mcap
+        for i, (topic, values) in enumerate(topics.items()):
+            print(f"Topic {topic}: {i+1}/{len(topics)}")
+            last_print = 0
+            for i, val in enumerate(values):
+                if topic in ["cam0", "cam1"]:
+                    with open(val[1], "rb") as file:
+                        img = file.read()
+                        image_val = {
+                            "timestamp": val[0],
+                            "frame_id": "gopro_link",
+                            "data": base64.b64encode(img).decode('utf-8'),
+                            "format": "jpg"
+                        }
+                    writer.add_message(
+                        channels[topic],
+                        log_time=int(float(image_val["timestamp"])*1e9),
+                        data=json.dumps(image_val).encode("utf-8"),
+                        publish_time=int(float(image_val["timestamp"])*1e9))
+                else:
+                    writer.add_message(
+                        channels[topic],
+                        log_time=int(float(val[0])*1e9),
+                        data=json.dumps(val[1]).encode("utf-8"),
+                        publish_time=int(float(val[0])*1e9))
 
-        last_print = 0
-        for i, (loc, pres) in enumerate(zip(locations, press_depth)):
-            writer.add_message(
-                location_channel_id,
-                log_time=int(float(loc["timestamp"])*1e9),
-                data=json.dumps(loc).encode("utf-8"),
-                publish_time=int(float(loc["timestamp"])*1e9))
-            writer.add_message(
-                pressure_channel_id,
-                log_time=int(float(loc["timestamp"])*1e9),
-                data=json.dumps(pres).encode("utf-8"),
-                publish_time=int(float(loc["timestamp"])*1e9))
-
-            current_percentage = round(i/len(locations)*100, 2)
-            if current_percentage-last_print > 5:
-                print(f"{current_percentage} %")
-                last_print = current_percentage
-
+                current_percentage = round(i/len(values)*100, 2)
+                if current_percentage-last_print > 5:
+                    print(f"{current_percentage}%")
+                    last_print = current_percentage
         writer.finish()
 
 
@@ -394,10 +440,10 @@ def generateMcapFromCsv(path: typing.Union[str | Path],
         writer.finish()
 
 
-def getTimeStamps():
+def getTimestamps(csv_path: typing.Union[str, Path]):
+    df = data_reader(csv_path)
     timestamps = []
-    # for timestamp, _, _, _, _, _, _, _, _, _ in data_reader(PATH_TO_CSV_FILE):
-    for data in data_reader(PATH_TO_CSV_FILE):
+    for data in df["timestamp"]:
         timestamps.append(data)
     return timestamps
 
@@ -446,7 +492,14 @@ def publishCameraCalib(path, schema_name: str, schema_path: Path, schema_encodin
         writer.finish()
 
 
-getTimeStamps()
+topics = {}
+
+# topics["timestamps"] = getTimestamps(PATH_TO_CSV_FILE)
+topics["pressure_depth"] = get_pressure_depth(PATH_TO_PRESSURE_DEPTH_FILE)
+topics.update(get_state(PATH_TO_CSV_FILE))
+
+write_mcap(topics)
+
 
 # publishTF(os.path.join(ROOT_PATH, "code/Transforms.json"),
 #           "foxglove.FrameTransforms",
