@@ -1,0 +1,42 @@
+cam0:
+  - name: "GoPro Camera"
+  - resolution:
+    - width: 2704
+    - height: 1520
+    - channels: 3
+  - frame_rate: 30
+  - frame_rate_units: "Hz (hertz)"
+  - offset_x: 619.0
+  - offset_x_units: "mm (milimeters)"
+  - offset_z: -120.0
+  - offset_Z_units: "mm (milimeters)"
+  - offset_theta: -56.0
+  - offset_theta_units: "° (degrees)"
+cam1:
+  - name: "Gray-scale Camera"
+  - resolution:
+    - width: 1936
+    - height: 1216
+    - channels: 1
+  - frame_rate: 4
+  - frame_rate_units: "Hz (hertz)"
+  - offset_x: -813.0
+  - offset_x_units: "mm (milimeters)"
+  - offset_z: -45.0
+  - offset_Z_units: "mm (milimeters)"
+  - offset_theta: -90.0
+  - offset_theta_units: "° (degrees)"
+SSS:
+  - entity1:
+    - name: "Low Frequency SSS"
+    - frequency: 455
+    - unit: "kilo Hertz (kHz)"
+  - entity2:
+    - name: "High Freqency SSS"
+    - frequency: 900
+    - unit: "kilo Hertz (kHz)"
+  - normalization_factor: 0.2
+  - TVG_factor: 280
+  - colormap: "bronze"
+  - SSS_horizontal_angles: 20
+  - SSS_horizontal_angles_unit: "° (degrees)"
