@@ -38,17 +38,25 @@ if not os.path.exists(PATH_TO_VIDEO_FOLDER):
     os.mkdir(PATH_TO_VIDEO_FOLDER)
 
 
-def data_reader(csv_path: typing.Union[str, Path]):
-    """ Reads data from a CSV file with predefined header """
-    with open(csv_path, "r", encoding="utf-8") as f:
-        for image_path, timestamp, lat, lon, est_depth, _, _, _, _, _, _, _, _, press, _, _, _, _, _, _, q, r, depth, alt in csv.reader(f):
-            # Discard first row
-            if image_path == "image":
-                print("Header row")
-                continue
+# def data_reader(csv_path: typing.Union[str, Path]):
+#     """ Reads data from a CSV file with predefined header """
+#     with open(csv_path, "r", encoding="utf-8") as f:
+#         for image_path, timestamp, lat, lon, est_depth, _, _, _, _, _, _, _, _, press, _, _, _, _, _, _, q, r, depth, alt in csv.reader(f):
+#             # Discard first row
+#             if image_path == "image":
+#                 print("Header row")
+#                 continue
 
-            image = os.path.basename(image_path)
-            yield (timestamp, image, float(lat), float(lon), float(est_depth), float(press), float(q), float(r), float(depth), float(alt))
+#             image = os.path.basename(image_path)
+#             yield (timestamp, image, float(lat), float(lon), float(est_depth), float(press), float(q), float(r), float(depth), float(alt))
+
+
+def data_reader(csv_path: typing.Union[str, Path]):
+    """ Function to read from csv file and yield each value """
+    with open(csv_path, "r", encoding="utf-8") as csv_file:
+        for i, csv_data in enumerate(csv.reader(csv_file)):
+
+            yield csv_data[0]
 
 
 def add_location_press_depth():
@@ -388,8 +396,9 @@ def generateMcapFromCsv(path: typing.Union[str | Path],
 
 def getTimeStamps():
     timestamps = []
-    for timestamp, _, _, _, _, _, _, _, _, _ in data_reader(PATH_TO_CSV_FILE):
-        timestamps.append(timestamp)
+    # for timestamp, _, _, _, _, _, _, _, _, _ in data_reader(PATH_TO_CSV_FILE):
+    for data in data_reader(PATH_TO_CSV_FILE):
+        timestamps.append(data)
     return timestamps
 
 
@@ -437,24 +446,26 @@ def publishCameraCalib(path, schema_name: str, schema_path: Path, schema_encodin
         writer.finish()
 
 
-publishTF(os.path.join(ROOT_PATH, "code/Transforms.json"),
-          "foxglove.FrameTransforms",
-          os.path.join(ROOT_PATH, "code/FrameTransforms.json"),
-          SchemaEncoding.JSONSchema, "tf", MessageEncoding.JSON,
-          "tf")
-publishCameraCalib(os.path.join(ROOT_PATH, "code/GoProCalib.json"),
-                   "foxglove.CameraCalibration",
-                   os.path.join(ROOT_PATH, "code/CameraCalibration.json"),
-                   SchemaEncoding.JSONSchema, "go_pro_calib", MessageEncoding.JSON,
-                   "go_pro_calib")
-add_location_press_depth()
-add_gopro()
-add_gray()
-add_segmentation()
-add_SSS_images(False)
-add_SSS_images(PATH_TO_LF_FOLDER, False, "sss_lf", "sss/lf")
-generateMcapFromCsv(os.path.join(ROOT_PATH, "DATA/Temperature.csv"),
-                    "foxglove.Float64Stamped",
-                    os.path.join(ROOT_PATH, "code/Float64Stamped.json"),
-                    SchemaEncoding.JSONSchema, "temperature", MessageEncoding.JSON,
-                    "temperature")
+getTimeStamps()
+
+# publishTF(os.path.join(ROOT_PATH, "code/Transforms.json"),
+#           "foxglove.FrameTransforms",
+#           os.path.join(ROOT_PATH, "code/FrameTransforms.json"),
+#           SchemaEncoding.JSONSchema, "tf", MessageEncoding.JSON,
+#           "tf")
+# publishCameraCalib(os.path.join(ROOT_PATH, "code/GoProCalib.json"),
+#                    "foxglove.CameraCalibration",
+#                    os.path.join(ROOT_PATH, "code/CameraCalibration.json"),
+#                    SchemaEncoding.JSONSchema, "go_pro_calib", MessageEncoding.JSON,
+#                    "go_pro_calib")
+# add_location_press_depth()
+# add_gopro()
+# add_gray()
+# add_segmentation()
+# add_SSS_images(False)
+# add_SSS_images(PATH_TO_LF_FOLDER, False, "sss_lf", "sss/lf")
+# generateMcapFromCsv(os.path.join(ROOT_PATH, "DATA/Temperature.csv"),
+#                     "foxglove.Float64Stamped",
+#                     os.path.join(ROOT_PATH, "code/Float64Stamped.json"),
+#                     SchemaEncoding.JSONSchema, "temperature", MessageEncoding.JSON,
+#                     "temperature")
