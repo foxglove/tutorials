@@ -386,6 +386,7 @@ def write_mcap(topics_to_write: dict, topics_channels: list):
             "cam0": "gopro",
             "cam1": "gray",
             "sss/hf": "sss",
+            "sss/l f": "sss",
             "cam0/segmentation": "gopro",
             "cam0/label": "gopro"
         }
@@ -422,7 +423,7 @@ def write_mcap(topics_to_write: dict, topics_channels: list):
 
                 current_percentage = round(i/len(values)*100, 2)
                 if current_percentage-last_print > 5:
-                    print(f"{current_percentage}%")
+                    print(f"{round(current_percentage)}%")
                     last_print = current_percentage
         writer.finish()
 
@@ -451,7 +452,8 @@ def main():
                 ("CompressedImage", "sss/lf"),
                 ("CompressedImage", "cam0/segmentation"),
                 ("CompressedImage", "cam0/label"),
-                ("CameraCalibration", "cam0/camera_info")
+                ("CameraCalibration", "cam0/camera_info"),
+                ("CameraCalibration", "cam1/camera_info")
                 ]
 
     write_mcap(topics, channels)
