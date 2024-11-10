@@ -20,6 +20,8 @@ PATH_TO_PRESSURE_DEPTH_FILE = Path(
     os.path.join(ROOT_PATH, "DATA", "Pressure.csv"))
 PATH_TO_RPM_FILE = Path(
     os.path.join(ROOT_PATH, "DATA", "Rpm.csv"))
+PATH_TO_TEMP_FILE = Path(
+    os.path.join(ROOT_PATH, "DATA", "Temperature.csv"))
 PATH_TO_SCHEMA_FOLDER = Path(
     os.path.join(ROOT_PATH, "schemas"))
 PATH_TO_CALIB_FILE = Path(
@@ -91,6 +93,20 @@ def get_rpm(csv_path: typing.Union[str, Path]) -> list:
     return rpm_values
 
 
+def get_temperature(csv_path: typing.Union[str, Path]) -> list:
+    df = data_reader(csv_path)
+    temp_values = []
+
+    for _, row in df.iterrows():
+        temp_val = {
+            "timestamp": float(row["timestamp"]),
+            "data": float(row["value(°c)"]),
+        }
+        temp_values.append((row["timestamp"], temp_val))
+
+    return temp_values
+
+
 def get_state(csv_path: typing.Union[str, Path]) -> dict:
     df = data_reader(csv_path)
     state_topics = {}
@@ -98,6 +114,8 @@ def get_state(csv_path: typing.Union[str, Path]) -> dict:
     location_values = []
     velocity_values = []
     position_values = []
+    tf_values = []
+    sea_values = []
     cam0_paths = []
     cam0_info = []
     cam1_paths = []
@@ -136,15 +154,90 @@ def get_state(csv_path: typing.Union[str, Path]) -> dict:
                 "z": float(row["alt(m)"]-df["alt(m)"][0])
             },
             "rotation": {
-                "x": 0,
-                "y": 0,
-                "z": -0.7071068,
-                "w": 0.7071068
+                "x": 0.7071068,
+                "y": -0.7071068,
+                "z": 0,
+                "w": 0
             }
         }
         position_values.append((row["timestamp"], position_val))
 
-        # GoPro
+        # GoPro TF to LUAV
+        tf_val = {
+            "parent_frame_id": "LUAV",
+            "child_frame_id": "gopro",
+            "translation": {
+                "x": 0.2,
+                "y": 0,
+                "z": 0
+            },
+            "rotation": {
+                "x": 0.7071068,
+                "y": -0.7071068,
+                "z": 0,
+                "w": 0
+            }
+        }
+        tf_values.append((row["timestamp"], tf_val))
+
+        # Sealevel TF to initial
+        tf_val = {
+            "parent_frame_id": "initial",
+            "child_frame_id": "sea_level",
+            "translation": {
+                "x": 0,
+                "y": 0,
+                "z": -df["depth(m)"][0]
+            },
+            "rotation": {
+                "x": 0,
+                "y": 0,
+                "z": 0,
+                "w": 1
+            }
+        }
+        tf_values.append((row["timestamp"], tf_val))
+
+        # Sea level "scene" representation
+        sea_val = {
+            "entities": [
+                {
+                    "frame_id": "sea_level",
+                    "id": "sea0",
+                    "cubes": [
+                        {
+                            "pose": {
+                                "position": {
+                                    "x": 0,
+                                    "y": 0,
+                                    "z": 0
+                                },
+                                "orientation": {
+                                    "x": 0,
+                                    "y": 0,
+                                    "z": 0,
+                                    "w": 1
+                                }
+                            },
+                            "size": {
+                                "x": 200,
+                                "y": 200,
+                                "z": 0.25
+                            },
+                            "color": {
+                                "r": 0,
+                                "g": 0,
+                                "b": 1,
+                                "a": 0.75
+                            }
+                        }
+                    ]
+                }
+            ]
+        }
+        sea_values.append((row["timestamp"], sea_val))
+
+        # GoPro Video
         cam0_paths.append((row["timestamp"], os.path.join(
             PATH_TO_IMAGES_FOLDER, os.path.basename(row["image"]))))
         calib_val = {
@@ -208,7 +301,9 @@ def get_state(csv_path: typing.Union[str, Path]) -> dict:
 
     state_topics["location"] = location_values
     state_topics["velocity"] = velocity_values
-    state_topics["tf"] = position_values
+    state_topics["position"] = position_values
+    state_topics["tf"] = tf_values
+    state_topics["sea"] = sea_values
     state_topics["cam0"] = cam0_paths
     state_topics["cam0/camera_info"] = cam0_info
     state_topics["cam1"] = cam1_paths
@@ -247,11 +342,17 @@ def write_mcap(topics: dict):
         generate_channel_id(
             channels, writer, "Float64Stamped", "rpm")
         generate_channel_id(
+            channels, writer, "Float64Stamped", "temperature")
+        generate_channel_id(
             channels, writer, "LocationFix", "location")
         generate_channel_id(
             channels, writer, "Vector3", "velocity")
         generate_channel_id(
+            channels, writer, "FrameTransform", "position")
+        generate_channel_id(
             channels, writer, "FrameTransform", "tf")
+        generate_channel_id(
+            channels, writer, "SceneUpdate", "sea")
         generate_channel_id(
             channels, writer, "CompressedImage", "cam0")
         generate_channel_id(
@@ -281,7 +382,7 @@ def write_mcap(topics: dict):
                         img = file.read()
                         image_val = {
                             "timestamp": val[0],
-                            "frame_id": "LUAV",
+                            "frame_id": "gopro",
                             "data": base64.b64encode(img).decode('utf-8'),
                             "format": img_format
                         }
@@ -308,6 +409,7 @@ topics = {}
 
 topics["pressure_depth"] = get_pressure_depth(PATH_TO_PRESSURE_DEPTH_FILE)
 topics["rpm"] = get_rpm(PATH_TO_RPM_FILE)
+topics["temperature"] = get_temperature(PATH_TO_TEMP_FILE)
 topics.update(get_state(PATH_TO_CSV_FILE))
 
 write_mcap(topics)

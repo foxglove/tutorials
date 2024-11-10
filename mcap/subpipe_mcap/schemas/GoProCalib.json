@@ -1,5 +1,5 @@
 {
-    "frame_id": "LUAV",
+    "frame_id": "gopro",
     "height": 1520,
     "width": 2704,
     "distortion_model": "plumb_bob",
