@@ -15,3 +15,6 @@
     * ...
 
 3. Run the script `convert_csv2mcap.py`. The MCAP file will be generated in an `output` folder.
+4. Open Foxglove and load the layout `foxglove_layout/Subpipe.json`
+
+
