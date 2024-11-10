@@ -28,7 +28,12 @@
       },
       "followMode": "follow-pose",
       "scene": {},
-      "transforms": {},
+      "transforms": {
+        "frame:LUAV": {},
+        "frame:gopro": {
+          "visible": false
+        }
+      },
       "topics": {},
       "layers": {},
       "publish": {
@@ -41,21 +46,20 @@
         "poseEstimateThetaDeviation": 0.26179939
       },
       "imageMode": {
-        "imageTopic": "cam0",
-        "calibrationTopic": "cam0/camera_info"
+        "imageTopic": "cam0"
       },
       "foxglovePanelTitle": "Cam0 GoPro"
     },
     "3D!15ejrl6": {
       "cameraState": {
         "perspective": true,
-        "distance": 3.1555842957601037,
-        "phi": 179.99994270422047,
-        "thetaOffset": -0.13402077623184291,
+        "distance": 13.26840862576079,
+        "phi": 55.973097064090425,
+        "thetaOffset": 131.1411469137792,
         "targetOffset": [
-          -0.014137439421267037,
-          -0.046724720493678554,
-          -1.2975325410634718e-17
+          -0.09017584056207717,
+          -0.2613445441127098,
+          4.6336145611260344e-17
         ],
         "target": [
           0,
@@ -87,9 +91,9 @@
             0
           ],
           "rpyCoefficient": [
-            180,
             0,
-            90
+            0,
+            0
           ]
         }
       },
@@ -110,6 +114,9 @@
           "distance": 1,
           "planarProjectionFactor": 0,
           "color": "#ffffff"
+        },
+        "sea": {
+          "visible": false
         }
       },
       "layers": {
@@ -174,7 +181,9 @@
       },
       "followMode": "follow-pose",
       "scene": {},
-      "transforms": {},
+      "transforms": {
+        "frame:LUAV": {}
+      },
       "topics": {},
       "layers": {},
       "publish": {
@@ -219,7 +228,9 @@
       },
       "followMode": "follow-pose",
       "scene": {},
-      "transforms": {},
+      "transforms": {
+        "frame:LUAV": {}
+      },
       "topics": {},
       "layers": {},
       "publish": {
@@ -438,7 +449,16 @@
       "diffMethod": "custom",
       "diffTopicPath": "",
       "showFullMessageForDiff": false,
-      "topicPath": "cam0/segmentation"
+      "topicPath": "sea",
+      "expansion": {
+        "entities": "e",
+        "0~entities": "e",
+        "timestamp~0~entities": "e",
+        "lifetime~0~entities": "e",
+        "cubes~0~entities": "e",
+        "0~cubes~0~entities": "e",
+        "size~0~cubes~0~entities": "e"
+      }
     },
     "RawMessages!1a60rcn": {
       "diffEnabled": false,
@@ -491,18 +511,18 @@
       "diffMethod": "custom",
       "diffTopicPath": "",
       "showFullMessageForDiff": false,
-      "topicPath": "go_pro_calib"
+      "topicPath": "tf"
     },
     "3D!3hox6kc": {
       "cameraState": {
         "perspective": true,
-        "distance": 8.802533373024437,
-        "phi": 174.63911795940578,
-        "thetaOffset": -0.13402055663592993,
+        "distance": 18.999999999950422,
+        "phi": 83.78322990196052,
+        "thetaOffset": -46.63518451097139,
         "targetOffset": [
-          -0.014137439421267037,
-          -0.046724720493678554,
-          -1.2975325410634718e-17
+          0.9462832731174552,
+          -10.420617226084467,
+          3.74447887989022e-21
         ],
         "target": [
           0,
@@ -524,7 +544,8 @@
       "scene": {
         "transforms": {
           "editable": true
-        }
+        },
+        "labelScaleFactor": 5.27
       },
       "transforms": {
         "frame:LUAV": {
@@ -534,9 +555,9 @@
             0
           ],
           "rpyCoefficient": [
-            180,
             0,
-            90
+            0,
+            0
           ]
         }
       },
@@ -557,6 +578,11 @@
           "distance": 1,
           "planarProjectionFactor": 0,
           "color": "#ffffff"
+        },
+        "sea": {
+          "visible": true,
+          "color": "#0800ff82",
+          "showOutlines": false
         }
       },
       "layers": {
