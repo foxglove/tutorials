@@ -514,10 +514,17 @@
         <limit lower="-2.71" upper="2.71" effort="3.95" velocity="27.96"/>
     </joint>
 
-    <link name="l515"/>
+    <link name="l515">
+        <visual>
+            <origin xyz="0 0 0" rpy="0 0 0"/>
+            <geometry>
+                <mesh filename="file:///home/jose/ws/ros2/foxglove_ws/src/foxglove_tutorials/mcap/generalized_humanoid/GR1_model/GR1T2/meshes/l515.dae"/>
+            </geometry>
+        </visual>
+    </link>
 
     <joint name="l515_j" type="fixed">
-        <origin xyz="0.0 0.0 0.0" rpy="-1.5707 0.0 -1.5707"/>
+        <origin xyz="0.115 0.0 0.2" rpy="-2.3561 0.0 -1.5707"/>
         <parent link="head_yaw"/>
         <child link="l515"/>
     </joint>
