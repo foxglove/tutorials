@@ -2,6 +2,11 @@
 
 [Dataset link](https://humanoid-manipulation.github.io/)
 
+There are two types of files:
+
+* h5
+* binary (zarr)
+
 # Download the dataset
 
 * The dataset *training_data_example* was used in this visualization.
