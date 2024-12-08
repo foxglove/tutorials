@@ -1,7 +1,6 @@
 import os
 import argparse
 import struct
-import base64
 from pathlib import Path
 
 import zarr
