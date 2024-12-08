@@ -30,7 +30,7 @@ WIP:
 
 # Visualize in Foxglove
 
-Import the layout 
+Import the layout [Humanoid.json](foxglove_layouts/Humanoid.json) in Foxglove. Then open a MCAP file.
 
 
 ![Camera and PointCloud](camera_pc_humanoid.gif)
