@@ -42,17 +42,10 @@ def generate_channel_id(channels: dict, writer: Writer, json_name: str, topic: s
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--dataset_path", type=str, default="data/box_zarr")
-parser.add_argument("--use_img", type=int, default=0)
-parser.add_argument("--vis_cloud", type=int, default=0)
-parser.add_argument("--use_pc_color", type=int, default=0)
-parser.add_argument("--downsample", type=int, default=0)
 
 args = parser.parse_args()
-use_img = args.use_img
 dataset_path = args.dataset_path
-vis_cloud = args.vis_cloud
-use_pc_color = args.use_pc_color
-downsample = args.downsample
+
 
 with zarr.open(dataset_path) as zf:
     print(zf.tree())
