@@ -13,6 +13,8 @@ import numpy as np
 from mcap.well_known import SchemaEncoding, MessageEncoding
 from mcap.writer import Writer
 
+import mcap_utils
+
 # Define paths
 ROOT_PATH = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PATH_TO_SCHEMA_FOLDER = Path(
@@ -23,21 +25,6 @@ PATH_TO_OUTPUT_FOLDER = Path(
 # Create output folders
 if not os.path.exists(PATH_TO_OUTPUT_FOLDER):
     os.mkdir(PATH_TO_OUTPUT_FOLDER)
-
-
-def generate_channel_id(channels: dict, writer: Writer, json_name: str, topic: str):
-    """ Generate a topic channel_id for the specified message type """
-    with open(os.path.join(PATH_TO_SCHEMA_FOLDER, json_name+".json"), "rb") as f:
-        schema = f.read()
-        pressure_schema_id = writer.register_schema(
-            name="foxglove."+json_name,
-            encoding=SchemaEncoding.JSONSchema,
-            data=schema)
-        pressure_channel_id = writer.register_channel(
-            topic=topic,
-            message_encoding=MessageEncoding.JSON,
-            schema_id=pressure_schema_id)
-        channels[topic] = pressure_channel_id
 
 
 parser = argparse.ArgumentParser()
@@ -124,7 +111,7 @@ for episode_idx, episode_end in enumerate(all_episode_ends):
         # Generate channels for each topic
         channels = {}
         for topic_channel in topics_channels:
-            generate_channel_id(
+            mcap_utils.generate_channel_id(
                 channels, writer, topic_channel[0], topic_channel[1])
 
         if episode_idx == 0:

@@ -1,15 +1,14 @@
 import os
-import argparse
 import struct
 from pathlib import Path
 
-import zarr
-from termcolor import cprint
 import numpy as np
 import cv2
 
+import joints_util
+
 try:
-    from sensor_msgs.msg import JointState, CameraInfo, CompressedImage, PointCloud2, PointField
+    from sensor_msgs.msg import JointState, CameraInfo, CompressedImage, PointCloud2, PointField, Image
     import rosbag2_py
     from rclpy.serialization import serialize_message
     from rclpy.time import Time
@@ -74,6 +73,18 @@ if not os.path.exists(PATH_TO_OUTPUT_FOLDER):
     os.mkdir(PATH_TO_OUTPUT_FOLDER)
 
 
+joints_names = joints_util.load_joints(
+    os.path.join(PATH_TO_MODEL, "joints.yaml"))
+
+
+def generate_joint_msgs(actions: np.array, ts) -> JointState:
+    j_msg = JointState()
+    j_msg.header.stamp = Time(nanoseconds=ts).to_msg()
+    j_msg.name = joints_names["names"]
+    j_msg.position = actions.tolist()
+    return j_msg
+
+
 def generate_pc_msgs(ptcld, ts) -> list:
     pointcloud.header.stamp = Time(nanoseconds=ts).to_msg()
     points = bytearray()
@@ -86,21 +97,54 @@ def generate_pc_msgs(ptcld, ts) -> list:
     return pointcloud
 
 
-writer = rosbag2_py.SequentialWriter()
-output_path = os.path.join(
-    PATH_TO_OUTPUT_FOLDER, "humanoid_ros2_h5.mcap")
+def generate_comp_camera_msgs(img: np.array, ts) -> CompressedImage:
+    image = CompressedImage()
+    image.header.frame_id = FRAME_ID
+    image.header.stamp = Time(nanoseconds=ts).to_msg()
+    image.format = "jpg"
+    cv2.imwrite("img.jpg", img)
+    with open("img.jpg", "rb") as file:
+        jpg = file.read()
+        image.data = jpg
+    os.remove("img.jpg")
+    return image
 
-writer.open(
-    rosbag2_py.StorageOptions(
-        uri=output_path, storage_id="mcap"),
-    rosbag2_py.ConverterOptions(
-        input_serialization_format="cdr", output_serialization_format="cdr"
-    ),
-)
+
+def generate_image_msgs(img: np.array, ts) -> Image:
+    image = Image()
+    image.header.frame_id = FRAME_ID
+    image.header.stamp = Time(nanoseconds=ts).to_msg()
+    image.encoding = "mono8"
+    image.height = img.shape[0]
+    image.width = img.shape[1]
+    image.step = image.width
+    img *= 255
+    image.data = img.flatten().astype(np.uint8).tolist()
+    return image
 
 
-writer.create_topic(
-    rosbag2_py.TopicMetadata(
-        name="point_cloud", type="sensor_msgs/msg/PointCloud2", serialization_format="cdr"
-    )
-)
+class Ros2Writer():
+    def __init__(self, bag_name):
+        output_path = os.path.join(
+            PATH_TO_OUTPUT_FOLDER, f"humanoid_ros2_{bag_name}")
+
+        self.writer = rosbag2_py.SequentialWriter()
+
+        self.writer.open(
+            rosbag2_py.StorageOptions(
+                uri=output_path, storage_id="mcap"),
+            rosbag2_py.ConverterOptions(
+                input_serialization_format="cdr", output_serialization_format="cdr"
+            ),
+        )
+
+    def create_topics(self, topics_and_types):
+        for topic, t_type in topics_and_types.items():
+            self.writer.create_topic(
+                rosbag2_py.TopicMetadata(
+                    name=topic, type="sensor_msgs/msg/"+t_type, serialization_format="cdr"
+                )
+            )
+
+    def write_topic(self, topic, msg, ts):
+        self.writer.write(topic, serialize_message(msg), ts)
