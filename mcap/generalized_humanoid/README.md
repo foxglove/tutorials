@@ -23,6 +23,8 @@ The scripts will generate an `output` folder with MCAP and ROS 2 folders with `.
 
 The script `generate_mcap_from_h5.py` generates two MCAP files simultanously, one is ROS 2 compatible and the other is MCAP. This is an example of the use of the different libraries for MCAP and ROS 2 bags.
 
+To visualize the URDF, play the bag using `ros2 bag play <path_to_bag>`, run the `foxglove_bridge` and the `static_robot_publisher` with the URDF file. Then create a new live connection in Foxglove.
+
 ## Binary data
 
 The dataset *training_data_example* was used in this visualization. The dataset is stored in `zarr` format. Install the Python module with `pip install zarr`. Color images are read from dataset in element `data/img`. Pointclouds are in element `data/point_cloud`, containing **10000** points with **6** fields: [x,y,z,r,g,b]

@@ -22,10 +22,10 @@ class H5McapGenerator():
         d_time_ns = int(1/10*1e9)
 
         topics_and_types = {
-            "joints": "JointState",
-            "point_cloud": "PointCloud2",
-            "camera": "CompressedImage",
-            "camera/depth": "Image"
+            "/joints": "JointState",
+            "/point_cloud": "PointCloud2",
+            "/camera": "CompressedImage",
+            "/camera/depth": "Image"
         }
 
         mcap_writer = mcap_utils.McapWriter(bag_name=rosbag_name)
@@ -40,38 +40,38 @@ class H5McapGenerator():
             img_mcap_msg = mcap_utils.generate_comp_camera_msgs(
                 img=img, ts=timestamp["nsec"])
             mcap_writer.write_message(
-                "camera", img_mcap_msg, timestamp["nsec"])
+                "/camera", img_mcap_msg, timestamp["nsec"])
             img_msg = ros2_mcap_utils.generate_comp_camera_msgs(
                 img=img, ts=timestamp["nsec"])
-            ros2_writer.write_topic("camera", img_msg, timestamp["nsec"])
+            ros2_writer.write_topic("/camera", img_msg, timestamp["nsec"])
 
             # Depth image
             depth_img = h5["front_depth"][step]
             depth_mcap_img = mcap_utils.generate_raw_image_msgs(
                 img=depth_img.copy(), ts=timestamp["nsec"])
             mcap_writer.write_message(
-                "camera/depth", depth_mcap_img, timestamp["nsec"])
+                "/camera/depth", depth_mcap_img, timestamp["nsec"])
             depth_img_msg = ros2_mcap_utils.generate_image_msgs(
                 img=depth_img.copy(), ts=timestamp["nsec"])
             ros2_writer.write_topic(
-                "camera/depth", depth_img_msg, timestamp["nsec"])
+                "/camera/depth", depth_img_msg, timestamp["nsec"])
 
             # PointCloud
             pc = h5["front_cloud"][step]
             pc_mcap_msg = mcap_utils.generate_pc_msgs(
                 ptcld=pc, ts=timestamp["nsec"])
             mcap_writer.write_message(
-                "point_cloud", pc_mcap_msg, timestamp["nsec"])
+                "/point_cloud", pc_mcap_msg, timestamp["nsec"])
             pc_msg = ros2_mcap_utils.generate_pc_msgs(
                 ptcld=pc, ts=timestamp["nsec"])
-            ros2_writer.write_topic("point_cloud", pc_msg, timestamp["nsec"])
+            ros2_writer.write_topic("/point_cloud", pc_msg, timestamp["nsec"])
 
             # Joints
             joints = h5["qpos_action"][step]
             joints32 = ros2_mcap_utils.joints_util.joint25_to_joint32(joints)
             joint_msg = ros2_mcap_utils.generate_joint_msgs(
                 joints32, timestamp["nsec"])
-            ros2_writer.write_topic("joints", joint_msg, timestamp["nsec"])
+            ros2_writer.write_topic("/joints", joint_msg, timestamp["nsec"])
 
             timestamp["nsec"] += d_time_ns
 
@@ -83,7 +83,7 @@ class H5McapGenerator():
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--h5_dataset_path", type=str,
-                    default="data/raw_wipe/10.h5")
+                    default="data/raw_wipe/11.h5")
 
 args = parser.parse_args()
 h5_dataset_path = args.h5_dataset_path

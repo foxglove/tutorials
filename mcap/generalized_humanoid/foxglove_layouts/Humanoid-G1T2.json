@@ -3,13 +3,13 @@
     "3D!4cklor1": {
       "cameraState": {
         "perspective": true,
-        "distance": 0.8753261807513159,
-        "phi": 179.99994270422047,
-        "thetaOffset": 0.5161610352753895,
+        "distance": 2.99999999999989,
+        "phi": 43.619599578503625,
+        "thetaOffset": 50.24236037934677,
         "targetOffset": [
-          0.08048687460396323,
-          -0.12972240844652586,
-          9.594676690103527e-19
+          0.5020132522354801,
+          0.20167485838286997,
+          6.919291028353313e-17
         ],
         "target": [
           0,
@@ -26,11 +26,11 @@
         "near": 0.5,
         "far": 5000
       },
-      "followMode": "follow-position",
+      "followMode": "follow-pose",
       "scene": {
         "transforms": {
           "showLabel": true,
-          "labelSize": 0.01,
+          "labelSize": 0.05,
           "editable": false
         },
         "meshUpAxis": "z_up",
@@ -40,112 +40,112 @@
       },
       "transforms": {
         "frame:head_pitch": {
-          "visible": true
+          "visible": false
         },
         "frame:head_roll": {
-          "visible": true
+          "visible": false
         },
         "frame:head_yaw": {
-          "visible": true
+          "visible": false
         },
         "frame:torso": {
-          "visible": true
+          "visible": false
         },
         "frame:waist_pitch": {
-          "visible": true
+          "visible": false
         },
         "frame:waist_roll": {
-          "visible": true
+          "visible": false
         },
         "frame:waist_yaw": {
-          "visible": true
+          "visible": false
         },
         "frame:z_link_imu": {
-          "visible": true
+          "visible": false
         },
         "frame:base_link": {
-          "visible": true
+          "visible": false
         },
         "frame:base": {
-          "visible": true
+          "visible": false
         },
         "frame:l_thigh_roll": {
-          "visible": true
+          "visible": false
         },
         "frame:l_thigh_yaw": {
-          "visible": true
+          "visible": false
         },
         "frame:l_thigh_pitch": {
-          "visible": true
+          "visible": false
         },
         "frame:l_shank_pitch": {
-          "visible": true
+          "visible": false
         },
         "frame:l_foot_pitch": {
-          "visible": true
+          "visible": false
         },
         "frame:l_foot_roll": {
-          "visible": true
+          "visible": false
         },
         "frame:r_thigh_roll": {
-          "visible": true
+          "visible": false
         },
         "frame:r_thigh_yaw": {
-          "visible": true
+          "visible": false
         },
         "frame:r_thigh_pitch": {
-          "visible": true
+          "visible": false
         },
         "frame:r_shank_pitch": {
-          "visible": true
+          "visible": false
         },
         "frame:r_foot_pitch": {
-          "visible": true
+          "visible": false
         },
         "frame:r_foot_roll": {
-          "visible": true
+          "visible": false
         },
         "frame:l_upper_arm_pitch": {
-          "visible": true
+          "visible": false
         },
         "frame:l_upper_arm_roll": {
-          "visible": true
+          "visible": false
         },
         "frame:l_upper_arm_yaw": {
-          "visible": true
+          "visible": false
         },
         "frame:l_lower_arm_pitch": {
-          "visible": true
+          "visible": false
         },
         "frame:l_hand_yaw": {
-          "visible": true
+          "visible": false
         },
         "frame:l_hand_roll": {
-          "visible": true
+          "visible": false
         },
         "frame:l_hand_pitch": {
-          "visible": true
+          "visible": false
         },
         "frame:r_upper_arm_pitch": {
-          "visible": true
+          "visible": false
         },
         "frame:r_upper_arm_roll": {
-          "visible": true
+          "visible": false
         },
         "frame:r_upper_arm_yaw": {
-          "visible": true
+          "visible": false
         },
         "frame:r_lower_arm_pitch": {
-          "visible": true
+          "visible": false
         },
         "frame:r_hand_yaw": {
-          "visible": true
+          "visible": false
         },
         "frame:r_hand_roll": {
-          "visible": true
+          "visible": false
         },
         "frame:r_hand_pitch": {
-          "visible": true
+          "visible": false
         },
         "frame:l515": {
           "visible": true,
@@ -183,7 +183,11 @@
           "visible": true,
           "colorField": "z",
           "colorMode": "colormap",
-          "colorMap": "turbo"
+          "colorMap": "turbo",
+          "pointSize": 2
+        },
+        "/camera/depth": {
+          "visible": false
         }
       },
       "layers": {
@@ -219,7 +223,7 @@
         "poseEstimateThetaDeviation": 0.26179939
       },
       "imageMode": {},
-      "followTf": "base"
+      "followTf": "base_link"
     },
     "Image!hxvuk7": {
       "cameraState": {
@@ -285,7 +289,7 @@
         "poseEstimateThetaDeviation": 0.26179939
       },
       "imageMode": {
-        "imageTopic": "camera",
+        "imageTopic": "/camera",
         "synchronize": false
       }
     },
@@ -353,12 +357,10 @@
         "poseEstimateThetaDeviation": 0.26179939
       },
       "imageMode": {
-        "imageTopic": "camera/depth",
+        "imageTopic": "/camera/depth",
         "synchronize": false,
         "colorMode": "gradient",
-        "colorMap": "rainbow",
-        "minValue": 0,
-        "maxValue": 255
+        "colorMap": "rainbow"
       }
     },
     "RawMessages!3n2pexu": {
@@ -366,7 +368,7 @@
       "diffMethod": "custom",
       "diffTopicPath": "",
       "showFullMessageForDiff": false,
-      "topicPath": "/point_cloud"
+      "topicPath": "point_cloud"
     },
     "RawMessages!3dk53pq": {
       "diffEnabled": false,
@@ -380,7 +382,10 @@
       "diffMethod": "custom",
       "diffTopicPath": "",
       "showFullMessageForDiff": false,
-      "topicPath": "camera/depth"
+      "topicPath": "camera/depth",
+      "expansion": {
+        "timestamp": "e"
+      }
     },
     "Tab!4axibsq": {
       "activeTabIdx": 0,
@@ -394,7 +399,8 @@
               "second": "Image!28pr1ef",
               "direction": "column"
             },
-            "direction": "row"
+            "direction": "row",
+            "splitPercentage": 47.78856526429342
           }
         },
         {
@@ -406,7 +412,8 @@
               "second": "RawMessages!kh23q9",
               "direction": "row"
             },
-            "direction": "row"
+            "direction": "row",
+            "splitPercentage": 40.1294498381877
           }
         }
       ]
