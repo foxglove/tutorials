@@ -1,5 +1,7 @@
 import os
 import h5py
+import argparse
+
 import ros2_mcap_utils
 import mcap_utils
 
@@ -79,4 +81,11 @@ class H5McapGenerator():
         mcap_writer.close()
 
 
-H5McapGenerator("mcap/generalized_humanoid/data/raw_pour/10.h5")
+parser = argparse.ArgumentParser()
+parser.add_argument("--h5_dataset_path", type=str,
+                    default="data/raw_wipe/10.h5")
+
+args = parser.parse_args()
+h5_dataset_path = args.h5_dataset_path
+
+H5McapGenerator(h5_dataset_path)
