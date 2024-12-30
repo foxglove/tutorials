@@ -1,4 +1,10 @@
 ---
+
+# Foxglove Visualization for [1X World Model Challenge](https://github.com/1x-technologies/1xgpt).
+
+
+
+---
 license: cc-by-nc-sa-4.0
 pretty_name: 1X World Model Challenge Raw Dataset 
 size_categories:
