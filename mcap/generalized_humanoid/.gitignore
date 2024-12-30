@@ -1,0 +1,6 @@
+data/*
+output/*
+*.pyc
+*/__pycache__
+*.jpg
+**/.zgroup
