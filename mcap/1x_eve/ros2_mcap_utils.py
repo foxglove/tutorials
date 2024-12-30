@@ -5,8 +5,6 @@ from pathlib import Path
 import numpy as np
 import cv2
 
-import joints_util
-
 try:
     from sensor_msgs.msg import JointState, CameraInfo, CompressedImage, PointCloud2, PointField, Image
     import rosbag2_py
@@ -73,14 +71,14 @@ if not os.path.exists(PATH_TO_OUTPUT_FOLDER):
     os.mkdir(PATH_TO_OUTPUT_FOLDER)
 
 
-joints_names = joints_util.load_joints(
-    os.path.join(PATH_TO_MODEL, "joints.yaml"))
+# joints_names = joints_util.load_joints(
+#     os.path.join(PATH_TO_MODEL, "joints.yaml"))
 
 
 def generate_joint_msgs(actions: np.array, ts) -> JointState:
     j_msg = JointState()
     j_msg.header.stamp = Time(nanoseconds=ts).to_msg()
-    j_msg.name = joints_names["names"]
+    # j_msg.name = joints_names["names"]
     j_msg.position = actions.tolist()
     return j_msg
 
