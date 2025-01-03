@@ -2,9 +2,9 @@
 
 import os
 import json
-import pathlib
 
 import numpy as np
+import cv2
 
 import ros2_mcap_utils
 
@@ -100,6 +100,7 @@ class McapGenerator():
         ]
 
         video_path = os.path.join(dir_path, "video_0.mp4")
+        cap = cv2.VideoCapture(video_path)
 
         timestamp = {"sec": 0, "nsec": 0}
         d_time_ns = int(1/metadata["hz"]*1e9)
@@ -153,6 +154,14 @@ class McapGenerator():
                     ros2_writer.write_topic(
                         "/joints", joints_msg, timestamp["nsec"])
 
+                    # Camera
+                    ret, frame = cap.read()
+                    if ret:
+                        comp_image = ros2_mcap_utils.generate_comp_camera_msgs(
+                            frame, timestamp["nsec"])
+                        ros2_writer.write_topic(
+                            "/camera", comp_image, timestamp["nsec"])
+
                     timestamp["nsec"] += d_time_ns
 
                     current = step/num_steps*100
@@ -160,25 +169,7 @@ class McapGenerator():
                         print(f"{round(current)}%")
                         last_print = current
 
-        # for step in range(num_steps):
-
-        #     # Color image
-        #     img = h5["front_color"][step]
-
-        #     img_msg = ros2_mcap_utils.generate_comp_camera_msgs(
-        #         img=img, ts=timestamp["nsec"])
-        #     ros2_writer.write_topic("/camera", img_msg, timestamp["nsec"])
-
-        #     # Joints
-        #     joints = h5["qpos_action"][step]
-
-        #     joint_msg = ros2_mcap_utils.generate_joint_msgs(
-        #         joints, timestamp["nsec"])
-        #     ros2_writer.write_topic("/joints", joint_msg, timestamp["nsec"])
-
-        #     timestamp["nsec"] += d_time_ns
-
-        #     print(f"{step}/{num_steps}")
+        cap.release()
 
 
 McapGenerator("val")

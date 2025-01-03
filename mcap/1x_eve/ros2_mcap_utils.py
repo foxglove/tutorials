@@ -48,7 +48,7 @@ def generate_comp_camera_msgs(img: np.array, ts) -> CompressedImage:
     with open("img.jpg", "rb") as file:
         jpg = file.read()
         image.data = jpg
-    os.remove("img.jpg")
+    # os.remove("img.jpg")
     return image
 
 
