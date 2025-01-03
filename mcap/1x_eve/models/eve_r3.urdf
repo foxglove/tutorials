@@ -137,6 +137,12 @@ limitations under the License.
     <axis xyz="1.0 0.0 0.0"/>
     <limit lower="-0.523599" upper="0.523599" effort="-1.0" velocity="-1.0"/>
   </joint>
+  <link name="base_link"/>
+  <joint name="j_base" type="fixed">
+    <parent link="base_link"/>
+    <child link="pelvis"/>
+  </joint>  
+  
   <link name="base">
     <inertial>
       <origin xyz="0.021997 0.006327 -0.006204" rpy="0.0 0.0 0.0"/>
