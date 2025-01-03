@@ -20,7 +20,7 @@ except ModuleNotFoundError:
 FRAME_ID = "head"
 
 # Define paths
-ROOT_PATH = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+ROOT_PATH = os.path.dirname(os.path.abspath(__file__))
 PATH_TO_MODEL = Path(
     os.path.join(ROOT_PATH, "models", "eve_r3.urdf"))
 PATH_TO_OUTPUT_FOLDER = Path(
@@ -28,14 +28,14 @@ PATH_TO_OUTPUT_FOLDER = Path(
 
 # Create output folders
 if not os.path.exists(PATH_TO_OUTPUT_FOLDER):
-    os.mkdir(PATH_TO_OUTPUT_FOLDER)
+    os.makedirs(PATH_TO_OUTPUT_FOLDER)
 
 
-def generate_joint_msgs(actions: np.array, ts) -> JointState:
+def generate_joint_msgs(names: list, positions: list, ts) -> JointState:
     j_msg = JointState()
     j_msg.header.stamp = Time(nanoseconds=ts).to_msg()
-    # j_msg.name = joints_names["names"]
-    j_msg.position = actions.tolist()
+    j_msg.name = names
+    j_msg.position = positions
     return j_msg
 
 
@@ -50,6 +50,18 @@ def generate_comp_camera_msgs(img: np.array, ts) -> CompressedImage:
         image.data = jpg
     os.remove("img.jpg")
     return image
+
+
+def generate_bool_msg(msg: bool) -> Bool:
+    boolean = Bool()
+    boolean.data = msg
+    return boolean
+
+
+def generate_float32_msg(msg: float) -> Float32:
+    float32 = Float32()
+    float32.data = msg
+    return float32
 
 
 def generate_image_msgs(img: np.array, ts) -> Image:
@@ -84,7 +96,7 @@ class Ros2Writer():
         for topic, t_type in topics_and_types.items():
             self.writer.create_topic(
                 rosbag2_py.TopicMetadata(
-                    name=topic, type="sensor_msgs/msg/"+t_type, serialization_format="cdr"
+                    name=topic, type=t_type, serialization_format="cdr"
                 )
             )
 

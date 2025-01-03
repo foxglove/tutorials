@@ -76,24 +76,7 @@ def idx_2_joint(index: int) -> str:
         return ""
 
 
-total_frames = metadata_shard["shard_num_frames"]
-maps = [
-    ("segment_idx", np.int32, []),
-    ("states", np.float32, [25]),
-]
-
-video_path = dir_path / "video_0.mp4"
-
-for m, dtype, shape in maps:
-    filename = dir_path / f"{m}_{rank}.bin"
-    print("Reading", filename, ". Shape:", [total_frames] + shape)
-    m_out = np.memmap(filename, dtype=dtype, mode="r",
-                      shape=tuple([total_frames] + shape))
-    assert m_out.shape[0] == total_frames
-    print(m, m_out[100:1000])
-    if m == "states":
-        for idx, joint_value in enumerate(m_out[0, :]):
-            print(f"{idx_2_joint(idx)}: {joint_value}")
+ROOT_PATH = os.path.dirname(os.path.abspath(__file__))
 
 
 class McapGenerator():
@@ -103,56 +86,99 @@ class McapGenerator():
 
         print(f"Generating MCAP {rosbag_name} from folder '{folder}'")
 
-        dir_path = pathlib.Path("val")
+        dir_path = os.path.join(ROOT_PATH, "val")
         # load metadata.json
-        with open(dir_path / "metadata.json", encoding="utf-8") as file:
-            self.metadata = json.load(file)
-        with open(dir_path / f"metadata_{rank}.json", encoding="utf-8") as file:
-            self.metadata_shard = json.load(file)
+        with open(os.path.join(dir_path, "metadata.json"), encoding="utf-8") as file:
+            metadata = json.load(file)
+        with open(os.path.join(dir_path, f"metadata_{rank}.json"), encoding="utf-8") as file:
+            metadata_shard = json.load(file)
+
+        total_frames = metadata_shard["shard_num_frames"]
+        maps = [
+            ("segment_idx", np.int32, []),
+            ("states", np.float32, [25]),
+        ]
+
+        video_path = os.path.join(dir_path, "video_0.mp4")
 
         timestamp = {"sec": 0, "nsec": 0}
-        d_time_ns = int(1/self.metadata["hz"]*1e9)
+        d_time_ns = int(1/metadata["hz"]*1e9)
 
         topics_and_types = {
-            "/joints": "JointState",
-            "/camera": "CompressedImage",
-            "/l_hand_state": "Bool",
-            "/r_hand_state": "Bool",
-            "/l_vel": "Float32",
-            "/a_vel": "Float32"
+            "/joints": "sensor_msgs/msg/JointState",
+            "/camera": "sensor_msgs/msg/CompressedImage",
+            "/l_hand_state": "std_msgs/msg/Bool",
+            "/r_hand_state": "std_msgs/msg/Bool",
+            "/l_vel": "std_msgs/msg/Float32",
+            "/a_vel": "std_msgs/msg/Float32"
         }
 
         ros2_writer = ros2_mcap_utils.Ros2Writer(bag_name=rosbag_name)
 
         ros2_writer.create_topics(topics_and_types)
 
-        for step in range(num_steps):
+        for m, dtype, shape in maps:
+            filename = os.path.join(dir_path, f"{m}_{rank}.bin")
+            print("Reading", filename, ". Shape:", [total_frames] + shape)
+            m_out = np.memmap(filename, dtype=dtype, mode="r",
+                              shape=tuple([total_frames] + shape))
+            assert m_out.shape[0] == total_frames
 
-            # Color image
-            img = h5["front_color"][step]
+            if m == "states":
+                num_steps = m_out.shape[0]
+                last_print = 0
+                for step in range(num_steps):
+                    joint_values = {}
+                    for idx, data_value in enumerate(m_out[step, :]):
 
-            img_msg = ros2_mcap_utils.generate_comp_camera_msgs(
-                img=img, ts=timestamp["nsec"])
-            ros2_writer.write_topic("/camera", img_msg, timestamp["nsec"])
+                        # Booleans and float32
+                        topic = "/"+idx_2_joint(idx)
+                        if topic in topics_and_types:
+                            if "hand" in topic:
+                                value = ros2_mcap_utils.generate_bool_msg(
+                                    bool(data_value))
+                            elif "vel" in topic:
+                                value = ros2_mcap_utils.generate_float32_msg(
+                                    float(data_value))
+                            else:
+                                value = 0
+                            ros2_writer.write_topic(
+                                topic, value, timestamp["nsec"])
+                        # Joints
+                        else:
+                            joint_values[idx_2_joint(idx)] = float(data_value)
 
-            # Depth image
-            depth_img = h5["front_depth"][step]
+                    joints_msg = ros2_mcap_utils.generate_joint_msgs(
+                        list(joint_values), list(joint_values.values()), timestamp["nsec"])
+                    ros2_writer.write_topic(
+                        "/joints", joints_msg, timestamp["nsec"])
 
-            depth_img_msg = ros2_mcap_utils.generate_image_msgs(
-                img=depth_img.copy(), ts=timestamp["nsec"])
-            ros2_writer.write_topic(
-                "/camera/depth", depth_img_msg, timestamp["nsec"])
+                    timestamp["nsec"] += d_time_ns
 
-            # Joints
-            joints = h5["qpos_action"][step]
+                    current = step/num_steps*100
+                    if current-last_print > 5:
+                        print(f"{round(current)}%")
+                        last_print = current
 
-            joint_msg = ros2_mcap_utils.generate_joint_msgs(
-                joints, timestamp["nsec"])
-            ros2_writer.write_topic("/joints", joint_msg, timestamp["nsec"])
+        # for step in range(num_steps):
 
-            timestamp["nsec"] += d_time_ns
+        #     # Color image
+        #     img = h5["front_color"][step]
 
-            print(f"{step}/{num_steps}")
+        #     img_msg = ros2_mcap_utils.generate_comp_camera_msgs(
+        #         img=img, ts=timestamp["nsec"])
+        #     ros2_writer.write_topic("/camera", img_msg, timestamp["nsec"])
+
+        #     # Joints
+        #     joints = h5["qpos_action"][step]
+
+        #     joint_msg = ros2_mcap_utils.generate_joint_msgs(
+        #         joints, timestamp["nsec"])
+        #     ros2_writer.write_topic("/joints", joint_msg, timestamp["nsec"])
+
+        #     timestamp["nsec"] += d_time_ns
+
+        #     print(f"{step}/{num_steps}")
 
 
 McapGenerator("val")
