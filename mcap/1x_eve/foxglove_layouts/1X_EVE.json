@@ -1,0 +1,262 @@
+{
+  "configById": {
+    "Image!4kvg1uf": {
+      "cameraState": {
+        "distance": 20,
+        "perspective": true,
+        "phi": 60,
+        "target": [
+          0,
+          0,
+          0
+        ],
+        "targetOffset": [
+          0,
+          0,
+          0
+        ],
+        "targetOrientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "thetaOffset": 45,
+        "fovy": 45,
+        "near": 0.5,
+        "far": 5000
+      },
+      "followMode": "follow-pose",
+      "scene": {},
+      "transforms": {
+        "frame:r_scapula": {
+          "rpyCoefficient": [
+            0,
+            0.2,
+            0
+          ]
+        }
+      },
+      "topics": {},
+      "layers": {},
+      "publish": {
+        "type": "point",
+        "poseTopic": "/move_base_simple/goal",
+        "pointTopic": "/clicked_point",
+        "poseEstimateTopic": "/initialpose",
+        "poseEstimateXDeviation": 0.5,
+        "poseEstimateYDeviation": 0.5,
+        "poseEstimateThetaDeviation": 0.26179939
+      },
+      "imageMode": {
+        "imageTopic": "/camera"
+      }
+    },
+    "3D!eooy7o": {
+      "cameraState": {
+        "perspective": true,
+        "distance": 3.680518204705213,
+        "phi": 43.783841082110165,
+        "thetaOffset": 44.796942256479284,
+        "targetOffset": [
+          1.1633973252991696,
+          0.4012146790157522,
+          -7.681532406709615e-17
+        ],
+        "target": [
+          0,
+          0,
+          0
+        ],
+        "targetOrientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "fovy": 45,
+        "near": 0.5,
+        "far": 5000
+      },
+      "followMode": "follow-pose",
+      "scene": {
+        "meshUpAxis": "z_up",
+        "transforms": {
+          "labelSize": 0,
+          "editable": true,
+          "axisScale": 0.701
+        }
+      },
+      "transforms": {
+        "frame:abdomen": {},
+        "frame:hip_x_link": {},
+        "frame:thigh": {},
+        "frame:shin": {},
+        "frame:r_scapula": {
+          "rpyCoefficient": [
+            0,
+            0.2,
+            0
+          ]
+        }
+      },
+      "topics": {
+        "/robot_description": {
+          "visible": true
+        }
+      },
+      "layers": {
+        "grid": {
+          "visible": true,
+          "frameLocked": true,
+          "label": "Grid",
+          "instanceId": "7387664b-b940-4a32-a3c6-9643a57c3209",
+          "layerId": "foxglove.Grid",
+          "size": 10,
+          "divisions": 10,
+          "lineWidth": 1,
+          "color": "#248eff",
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ]
+        },
+        "ddd6eba8-937b-4f3f-9383-2900a6ef126e": {
+          "visible": true,
+          "frameLocked": true,
+          "label": "URDF",
+          "instanceId": "ddd6eba8-937b-4f3f-9383-2900a6ef126e",
+          "layerId": "foxglove.Urdf",
+          "sourceType": "filePath",
+          "url": "",
+          "filePath": "/home/jose/ws/ros2/foxglove_ws/src/foxglove_tutorials/mcap/1x_eve/models/eve_r3.urdf",
+          "parameter": "",
+          "topic": "",
+          "framePrefix": "",
+          "displayMode": "auto",
+          "fallbackColor": "#ffffff",
+          "order": 1
+        }
+      },
+      "publish": {
+        "type": "point",
+        "poseTopic": "/move_base_simple/goal",
+        "pointTopic": "/clicked_point",
+        "poseEstimateTopic": "/initialpose",
+        "poseEstimateXDeviation": 0.5,
+        "poseEstimateYDeviation": 0.5,
+        "poseEstimateThetaDeviation": 0.26179939
+      },
+      "imageMode": {},
+      "followTf": "base"
+    },
+    "Indicator!42bhgum": {
+      "path": "/l_hand_state.data",
+      "style": "background",
+      "fallbackColor": "#ffffff",
+      "fallbackLabel": "OPEN",
+      "rules": [
+        {
+          "operator": "=",
+          "rawValue": "true",
+          "color": "#68e24a",
+          "label": "CLOSED"
+        }
+      ],
+      "foxglovePanelTitle": "Left Hand"
+    },
+    "Indicator!4ex2b8f": {
+      "path": "/r_hand_state.data",
+      "style": "background",
+      "fallbackColor": "#ffffff",
+      "fallbackLabel": "OPEN",
+      "rules": [
+        {
+          "operator": "=",
+          "rawValue": "true",
+          "color": "#68e24a",
+          "label": "CLOSED"
+        }
+      ],
+      "foxglovePanelTitle": "Right Hand"
+    },
+    "StateTransitions!2qspanl": {
+      "paths": [
+        {
+          "value": "/l_hand_state.data",
+          "timestampMethod": "receiveTime",
+          "label": "Left Hand"
+        },
+        {
+          "value": "/r_hand_state.data",
+          "timestampMethod": "receiveTime",
+          "label": "Right Hand"
+        }
+      ],
+      "isSynced": true,
+      "nextExperimentActive": true
+    },
+    "Plot!3v847hb": {
+      "paths": [
+        {
+          "timestampMethod": "receiveTime",
+          "value": "/a_vel.data",
+          "enabled": true,
+          "color": "#4e98e2",
+          "label": "Angular"
+        },
+        {
+          "timestampMethod": "receiveTime",
+          "value": "/l_vel.data",
+          "enabled": true,
+          "color": "#f5774d",
+          "label": "Linear"
+        }
+      ],
+      "showXAxisLabels": true,
+      "showYAxisLabels": true,
+      "showLegend": true,
+      "legendDisplay": "floating",
+      "showPlotValuesInLegend": false,
+      "isSynced": true,
+      "xAxisVal": "timestamp",
+      "sidebarDimension": 240,
+      "foxglovePanelTitle": "Velocity"
+    }
+  },
+  "globalVariables": {},
+  "userNodes": {},
+  "playbackConfig": {
+    "speed": 1
+  },
+  "layout": {
+    "first": {
+      "first": "Image!4kvg1uf",
+      "second": "3D!eooy7o",
+      "direction": "column",
+      "splitPercentage": 38.35480673934589
+    },
+    "second": {
+      "first": {
+        "first": "Indicator!42bhgum",
+        "second": "Indicator!4ex2b8f",
+        "direction": "row"
+      },
+      "second": {
+        "first": "StateTransitions!2qspanl",
+        "second": "Plot!3v847hb",
+        "direction": "column"
+      },
+      "direction": "column",
+      "splitPercentage": 24.2814667988107
+    },
+    "direction": "row",
+    "splitPercentage": 68.48958333333334
+  }
+}
