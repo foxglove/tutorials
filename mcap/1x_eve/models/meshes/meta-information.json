@@ -1,0 +1,16 @@
+{
+    "robots": [
+        {
+            "name": "EVEr3",
+            "type": "humanoid robot",
+            "manufacturer": "Halodi",
+            "xacro-generated": false,
+            "urdf": [
+                "eve_r3.urdf"
+            ],
+            "variant": null,
+            "source-link": "https://github.com/ankurhanda/robot-assets/tree/12f1a3c89c9975194551afaed0dfae1e09fdb27c/urdfs/robots/halodi",
+            "id": 88
+        }
+    ]
+}
