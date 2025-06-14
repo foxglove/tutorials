@@ -3,6 +3,7 @@ import time
 import logging
 import numpy as np
 import math
+#import datetime
 
 from lerobot.common.robots.so100_follower import SO100FollowerConfig, SO100Follower
 
@@ -66,6 +67,11 @@ def main():
 
     print(f"Loading URDF from {URDF_FILE} ...")
     robot = URDF.load(URDF_FILE)
+
+    # (Optional) Log data to MCAP files
+    #now_str = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    #file_name = f"so_arm_100_{now_str}.mcap"
+    #foxglove.open_mcap(file_name)
 
     # Start the Foxglove server
     server = foxglove.start_server()
