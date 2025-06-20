@@ -21,12 +21,15 @@ from lerobot.common.cameras.opencv.camera_opencv import OpenCVCamera
 from lerobot.common.cameras.configs import ColorMode, Cv2Rotation
 
 from urdfpy import URDF
+# Hack to ensure np.float works with ancient urdfpy version
+if not hasattr(np, 'float'):
+    np.float = float
 
 WORLD_FRAME_ID = "world"
 BASE_FRAME_ID = "base"
 RATE_HZ = 30.0
 URDF_FILE = "SO100/so100.urdf"
-ROBOT_NAME = "pinky_robot"
+ROBOT_NAME = "foxglove_so100"
 WRIST_CAM_ID = 0
 ENV_CAM_ID = 4
 
@@ -148,9 +151,8 @@ def main():
             obs = follower.get_observation()
             print(obs)
 
-            # Map observations to URDF joints applying offsets
-            #TODO: It seems the URDF 0 position does not match the calibrated arm position, hence
-            # the offsets below. We should make sure to capture the correct offsets here
+            #TODO: The URDF 0 position does not match the calibrated arm 0 position
+            # as described in the lerobot documentation.
             joint_positions["1"] = math.radians(obs.get("shoulder_pan.pos", 0.0)) * -1.
             joint_positions["2"] = math.radians(obs.get("shoulder_lift.pos", 0.0))
             joint_positions["3"] = math.radians(obs.get("elbow_flex.pos", 0.0))
