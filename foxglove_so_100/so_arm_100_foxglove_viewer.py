@@ -74,7 +74,7 @@ def main():
     # (Optional) Log data to MCAP files
     #now_str = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     #file_name = f"so_arm_100_{now_str}.mcap"
-    #foxglove.open_mcap(file_name)
+    #writer = foxglove.open_mcap(file_name)
 
     # Start the Foxglove server
     server = foxglove.start_server()
@@ -208,6 +208,7 @@ def main():
         follower.disconnect()
         camera.disconnect()
         camera2.disconnect()
+        #writer.close()
 
 if __name__ == "__main__":
     main()
