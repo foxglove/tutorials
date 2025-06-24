@@ -1,0 +1,307 @@
+{
+  "configById": {
+    "3D!1dyg4vd": {
+      "cameraState": {
+        "perspective": true,
+        "distance": 2.4417309747357656,
+        "phi": 58.152958152968374,
+        "thetaOffset": 125.34632034632459,
+        "targetOffset": [
+          0.10276355966644965,
+          0.23322023388093666,
+          9.096916080494186e-17
+        ],
+        "target": [
+          0,
+          0,
+          0
+        ],
+        "targetOrientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "fovy": 45,
+        "near": 0.5,
+        "far": 5000
+      },
+      "followMode": "follow-pose",
+      "scene": {},
+      "transforms": {},
+      "topics": {},
+      "layers": {
+        "grid": {
+          "visible": true,
+          "frameLocked": true,
+          "label": "Grid",
+          "instanceId": "5516aa3b-d32f-499c-a57c-d6ea3ba1930c",
+          "layerId": "foxglove.Grid",
+          "size": 10,
+          "divisions": 10,
+          "lineWidth": 1,
+          "color": "#248eff",
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ]
+        }
+      },
+      "publish": {
+        "type": "point",
+        "poseTopic": "/move_base_simple/goal",
+        "pointTopic": "/clicked_point",
+        "poseEstimateTopic": "/initialpose",
+        "poseEstimateXDeviation": 0.5,
+        "poseEstimateYDeviation": 0.5,
+        "poseEstimateThetaDeviation": 0.26179939
+      },
+      "imageMode": {}
+    },
+    "Image!3fv1ay8": {
+      "cameraState": {
+        "distance": 20,
+        "perspective": true,
+        "phi": 60,
+        "target": [
+          0,
+          0,
+          0
+        ],
+        "targetOffset": [
+          0,
+          0,
+          0
+        ],
+        "targetOrientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "thetaOffset": 45,
+        "fovy": 45,
+        "near": 0.5,
+        "far": 5000
+      },
+      "followMode": "follow-pose",
+      "scene": {},
+      "transforms": {},
+      "topics": {},
+      "layers": {},
+      "publish": {
+        "type": "point",
+        "poseTopic": "/move_base_simple/goal",
+        "pointTopic": "/clicked_point",
+        "poseEstimateTopic": "/initialpose",
+        "poseEstimateXDeviation": 0.5,
+        "poseEstimateYDeviation": 0.5,
+        "poseEstimateThetaDeviation": 0.26179939
+      },
+      "imageMode": {
+        "imageTopic": "/image"
+      }
+    },
+    "Image!37c1240": {
+      "cameraState": {
+        "distance": 20,
+        "perspective": true,
+        "phi": 60,
+        "target": [
+          0,
+          0,
+          0
+        ],
+        "targetOffset": [
+          0,
+          0,
+          0
+        ],
+        "targetOrientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "thetaOffset": 45,
+        "fovy": 45,
+        "near": 0.5,
+        "far": 5000
+      },
+      "followMode": "follow-pose",
+      "scene": {},
+      "transforms": {},
+      "topics": {},
+      "layers": {},
+      "publish": {
+        "type": "point",
+        "poseTopic": "/move_base_simple/goal",
+        "pointTopic": "/clicked_point",
+        "poseEstimateTopic": "/initialpose",
+        "poseEstimateXDeviation": 0.5,
+        "poseEstimateYDeviation": 0.5,
+        "poseEstimateThetaDeviation": 0.26179939
+      },
+      "imageMode": {
+        "imageTopic": "/image_with_depth"
+      }
+    },
+    "Image!3lzq9ud": {
+      "cameraState": {
+        "distance": 20,
+        "perspective": true,
+        "phi": 60,
+        "target": [
+          0,
+          0,
+          0
+        ],
+        "targetOffset": [
+          0,
+          0,
+          0
+        ],
+        "targetOrientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "thetaOffset": 45,
+        "fovy": 45,
+        "near": 0.5,
+        "far": 5000
+      },
+      "followMode": "follow-pose",
+      "scene": {},
+      "transforms": {},
+      "topics": {},
+      "layers": {},
+      "publish": {
+        "type": "point",
+        "poseTopic": "/move_base_simple/goal",
+        "pointTopic": "/clicked_point",
+        "poseEstimateTopic": "/initialpose",
+        "poseEstimateXDeviation": 0.5,
+        "poseEstimateYDeviation": 0.5,
+        "poseEstimateThetaDeviation": 0.26179939
+      },
+      "imageMode": {
+        "imageTopic": "/hand_image"
+      }
+    },
+    "Plot!3o8fstj": {
+      "paths": [
+        {
+          "value": "/gripper_state.value",
+          "enabled": true,
+          "timestampMethod": "receiveTime",
+          "color": "#f5774d"
+        }
+      ],
+      "showXAxisLabels": true,
+      "showYAxisLabels": true,
+      "showLegend": true,
+      "legendDisplay": "floating",
+      "showPlotValuesInLegend": false,
+      "isSynced": true,
+      "xAxisVal": "timestamp",
+      "sidebarDimension": 240
+    },
+    "Plot!3ues8i": {
+      "paths": [
+        {
+          "value": "/joint_state.joint5",
+          "enabled": true,
+          "timestampMethod": "receiveTime",
+          "color": "#4e98e2"
+        },
+        {
+          "value": "/joint_state.joint0",
+          "enabled": true,
+          "timestampMethod": "receiveTime",
+          "color": "#f5774d"
+        },
+        {
+          "value": "/joint_state.joint1",
+          "enabled": true,
+          "timestampMethod": "receiveTime",
+          "color": "#f7df71"
+        },
+        {
+          "value": "/joint_state.joint2",
+          "enabled": true,
+          "timestampMethod": "receiveTime",
+          "color": "#5cd6a9"
+        },
+        {
+          "value": "/joint_state.joint3",
+          "enabled": true,
+          "timestampMethod": "receiveTime",
+          "color": "#61cbff"
+        },
+        {
+          "value": "/joint_state.joint4",
+          "enabled": true,
+          "timestampMethod": "receiveTime",
+          "color": "#a395e2"
+        }
+      ],
+      "showXAxisLabels": true,
+      "showYAxisLabels": true,
+      "showLegend": true,
+      "legendDisplay": "floating",
+      "showPlotValuesInLegend": false,
+      "isSynced": true,
+      "xAxisVal": "timestamp",
+      "sidebarDimension": 240
+    },
+    "RawMessages!26x5ilc": {
+      "diffEnabled": false,
+      "diffMethod": "custom",
+      "diffTopicPath": "",
+      "showFullMessageForDiff": false,
+      "topicPath": "/natural_language_instruction.text",
+      "fontSize": 30
+    }
+  },
+  "globalVariables": {},
+  "userNodes": {},
+  "playbackConfig": {
+    "speed": 1
+  },
+  "layout": {
+    "first": {
+      "first": "3D!1dyg4vd",
+      "second": {
+        "first": "Image!3fv1ay8",
+        "second": "Image!37c1240",
+        "direction": "row"
+      },
+      "direction": "row"
+    },
+    "second": {
+      "first": {
+        "first": "Image!3lzq9ud",
+        "second": "Plot!3o8fstj",
+        "direction": "column",
+        "splitPercentage": 66.08187134502924
+      },
+      "second": {
+        "first": "Plot!3ues8i",
+        "second": "RawMessages!26x5ilc",
+        "direction": "column",
+        "splitPercentage": 82.62322472848788
+      },
+      "direction": "row"
+    },
+    "direction": "column",
+    "splitPercentage": 41.10275689223057
+  }
+}
