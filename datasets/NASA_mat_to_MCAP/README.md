@@ -1,3 +1,8 @@
+---
+title: "Convert .mat files to MCAP"
+short_description: "Visualize Matlab files for NASA Valkyrie box pickup task"
+---
+
 # Introduction
 
 This folder contains an example on how to generate MCAP files from `.mat` files typically used in MATLAB or Octave.

@@ -1,3 +1,9 @@
+---
+title: "Visualizing LeRobot (SO-100) using Foxglove"
+blog_post_url: "https://foxglove.dev/blog/visualizing-lerobot-so-100-using-foxglove"
+short_description: "Use LeRobot API and Foxglove SDK to visualize SO-100 state in real-time"
+---
+
 # LeRobot + Foxglove visualization
 
 This directory contains a proof-of-concept visualization of LeRobot data using [Foxglove SDK](https://docs.foxglove.dev/docs/sdk/introduction).

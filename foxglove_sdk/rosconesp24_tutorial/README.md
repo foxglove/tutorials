@@ -1,3 +1,7 @@
+---
+title: "ROSCON Spain 2024 MCAP Tutorial"
+short_description: "Convert battery percentage, coordinates, and velocities to MCAP"
+---
 # ROSCON Spain 2024 MCAP Tutorial
 
 This folder contains the files for the tutorial explained in the Foxglove Workshop at ROSCON Spain 2024 (19th-20th September)
@@ -11,4 +15,4 @@ This folder contains the files for the tutorial explained in the Foxglove Worksh
 * `mcap_tutorial.py`: code to convert CSV file to MCAP
 * `tutorial.mcap`: resulting MCAP file to visualize in Foxglove
 
-    
+

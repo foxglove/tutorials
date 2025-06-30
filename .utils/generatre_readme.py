@@ -54,6 +54,8 @@ def scan_tutorials():
                     "path": os.path.dirname(rel_path),
                     "short_description": metadata.get("short_description", ""),
                     "blog_post_url": metadata.get("blog_post_url", ""),
+                    "video_url": metadata.get("video_url", ""),
+                    "visualize_url": metadata.get("visualize_url", ""),
                 })
     return sorted(tutorials, key=lambda t: t["path"])
 
