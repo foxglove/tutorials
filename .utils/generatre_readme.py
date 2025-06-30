@@ -12,7 +12,6 @@ Execute it from the top-leve directory.
 ROOT_DIR = os.getcwd()
 TEMPLATE_PATH = os.path.join(".utils", "README_template.md.j2")
 
-# Category display names
 CATEGORY_NAMES = {
     "datasets": "Datasets",
     "foxglove_sdk": "Foxglove SDK",
@@ -60,16 +59,20 @@ def scan_tutorials():
     return sorted(tutorials, key=lambda t: t["path"])
 
 def group_tutorials_by_category(tutorials):
-    """Group tutorials by top-level directory (category)"""
+    """Group tutorials by top-level directory (category), with special handling for integrations"""
     categories = {}
 
     for tutorial in tutorials:
-        # Get the top-level directory (category)
+        # Get the path parts
         path_parts = tutorial["path"].split("/")
         category = path_parts[0] if path_parts else "other"
 
-        # Use the display name from constants, fallback to formatted name
-        display_name = CATEGORY_NAMES.get(category, category.replace('_', ' ').title())
+        # Special handling for integrations directory with ROS1/ROS2 or other subdirectories
+        if category == "integrations" and len(path_parts) >= 2:
+            ros_version = path_parts[1]
+            display_name = f"Integrations - {ros_version.upper()}"
+        else:
+            display_name = CATEGORY_NAMES.get(category, category.replace('_', ' ').title())
 
         if display_name not in categories:
             categories[display_name] = []

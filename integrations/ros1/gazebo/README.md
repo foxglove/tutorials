@@ -1,3 +1,9 @@
+---
+title: "ROS1 Gazebo Simulation Demo"
+short_description: "Code reference for ROS 1 Gazebo simulation tutorial"
+blog_post_url: "https://foxglove.dev/blog/simulating-robotic-scenarios-with-ros1-and-gazebo"
+---
+
 # ROS1 Gazebo simulation demo
 
 Code reference for ROS 1 Gazebo simulation tutorial at https://foxglove.dev/blog/simulating-robotic-scenarios-with-ros1-and-gazebo.

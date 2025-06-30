@@ -1,3 +1,10 @@
+---
+title: "Rosbridge Demo with ROS 1 and ROS 2"
+short_description: "Interactive demo showing how to use Rosbridge with ROS"
+blog_post_url: "https://foxglove.dev/blog/using-rosbridge-with-ros1"
+visualize_url: "https://foxglove.github.io/rosbridge-demo/"
+---
+
 # Rosbridge Demo with ROS 1 and ROS 2
 
 Check out the hosted demo at [foxglove.github.io/rosbridge-demo/](https://foxglove.github.io/rosbridge-demo/).

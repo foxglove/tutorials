@@ -1,3 +1,8 @@
+---
+title: "ROS 2 Pose Republisher"
+short_description: "Republisher for goal_pose needed when using Foxglove in simulation"
+---
+
 # pose_republisher
 
 This node serves as a republisher for the `goal_pose` needed when using Foxglove in simulation.
