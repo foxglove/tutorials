@@ -1,6 +1,6 @@
 ---
 title: "Foxglove Visualization for 1X World Model Challenge"
-video: "https://www.youtube.com/watch?v=A9wl491ltPA"
+video_url: "https://www.youtube.com/watch?v=A9wl491ltPA"
 short_description: "Use Foxglove to visualize 1X World Model Challenge"
 ---
 
