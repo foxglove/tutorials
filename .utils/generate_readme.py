@@ -5,7 +5,7 @@ from jinja2 import Environment, FileSystemLoader
 
 """
 A script to generate the README.md file for the project.
-Execute it from the top-leve directory.
+Execute it from the top-level directory.
 """
 
 # Root directory of the project (current working directory when script is run)
