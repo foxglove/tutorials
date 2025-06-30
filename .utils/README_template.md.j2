@@ -8,7 +8,7 @@ Below is a list of all tutorials available in this repository:
 
 {%- for tutorial in tutorials %}
 ### [{{ tutorial.title }}]({{ tutorial.path }}/README.md)
-- 📝 Description: {{ tutorial.short_description }}
+- 📝 {{ tutorial.short_description }}
 {%- if tutorial.blog_post_url %}
 - 🔗 [Related Blog Post]({{ tutorial.blog_post_url }})
 {%- endif %}
