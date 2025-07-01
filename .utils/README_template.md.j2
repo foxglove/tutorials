@@ -1,0 +1,23 @@
+# Foxglove Tutorials
+
+This repository contains a collection of [Foxglove](https://foxglove.dev/) tutorials grouped by dataset and integration use cases.
+
+Below is a list of all tutorials available in this repository:
+{% for category, tutorials in categories.items() %}
+## {{ category }}
+
+{%- for tutorial in tutorials %}
+### [{{ tutorial.title }}]({{ tutorial.path }}/README.md)
+- 📝 {{ tutorial.short_description }}
+{%- if tutorial.blog_post_url %}
+- 🔗 [Related Blog Post]({{ tutorial.blog_post_url }})
+{%- endif %}
+{%- if tutorial.video_url %}
+- 🎥 [Video]({{ tutorial.video_url }})
+{%- endif %}
+{%- if tutorial.visualize_url %}
+- 📊 [Visualize]({{ tutorial.visualize_url }})
+{%- endif %}
+{%- endfor %}
+{% endfor %}
+Join the Foxglove [Discord](https://discord.gg/UEuytgVkks) and follow [our blog](https://foxglove.dev/blog) for more ideas on how to integrate Foxglove into your robotics development workflows.
