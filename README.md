@@ -8,8 +8,6 @@ Below is a list of all tutorials available in this repository:
 ### [Foxglove Visualization for 1X World Model Challenge](datasets/1x_eve/README.md)
 - 📝 Use Foxglove to visualize 1X World Model Challenge
 - 🎥 [Video](https://www.youtube.com/watch?v=A9wl491ltPA)
-### [Convert .mat files to MCAP](datasets/NASA_mat_to_MCAP/README.md)
-- 📝 Visualize Matlab files for NASA Valkyrie box pickup task
 ### [Converting Argoverse 2 Dataset to MCAP](datasets/foxglove_av2_tutorial/README.md)
 - 📝 This example converts the LiDAR scans from an AV2 log to MCAP.
 - 🎥 [Video](https://youtu.be/tBj1LrL1v18)
