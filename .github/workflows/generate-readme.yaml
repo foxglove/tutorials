@@ -1,0 +1,33 @@
+name: Autogenerate README
+
+on:
+  pull_request: {}
+
+jobs:
+  generate-readme:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r .utils/requirements.txt
+
+      - name: Generate README
+        run: python .utils/generate_readme.py
+
+      - name: Check for uncommitted README changes
+        run: |
+          git add README.md
+          git diff --cached --exit-code || {
+            echo "::error::README.md is out of date or modified manually. Please re-run the generate_readme script and commit the result.";
+            exit 1;
+          }
