@@ -1,0 +1,22 @@
+This repo contains Foxlove tutorials.
+
+To contribute a tutorial, please follow these steps:
+
+1. Pick a directory that best fits the tutorial
+2. Create a directory structure ensuring the following are present (if applies):
+    * `foxglove_layouts` - directory for layouts
+    * `data` - folder for any datasets
+    * `urdf` - folder with any urdf models
+    * `media` - put any images/videos if you need to link to them
+    * `README.md` - should describe the tutorial and include minimal set of instructions to reproduce the results without a need to open a blog-post or another write-up
+    * List of dependencies and instructions to install them
+3. Set metadata in the README file
+    * place it at the top of your new README file, encapsulating it between a two rows of `---`
+    * Fill-in the following fields, making sure to not make any typos:
+        - `title` - the title of the tutorial (required)
+        - `short_description` - short description of your tutorial (required)
+        - `blog_post_url` - the url to blog post (optional)
+        - `video_url` - the url to the video (optional)
+        - `visualize_url` - the url to Foxglove visualization (optional)
+
+When creating a merge request, a GitHub action should automatically regenerate the README based on your metadata. To test it yourself, you can run the python script `.utils/generate_readme.py` in the root of this repo.
