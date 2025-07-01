@@ -18,5 +18,4 @@ To contribute a tutorial, please follow these steps:
         - `blog_post_url` - the url to blog post (optional)
         - `video_url` - the url to the video (optional)
         - `visualize_url` - the url to Foxglove visualization (optional)
-
-When creating a merge request, a GitHub action should automatically regenerate the README based on your metadata. To test it yourself, you can run the python script `.utils/generate_readme.py` in the root of this repo.
+4. Regenerate the main README.md by running `python .utils/generate_readme.py` from the root of the repo (install `.utils/requirements.txt` if needed).

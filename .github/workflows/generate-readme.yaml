@@ -26,3 +26,11 @@ jobs:
 
       - name: Generate README
         run: python .utils/generate_readme.py
+
+      - name: Check for uncommitted README changes
+        run: |
+          git add README.md
+          git diff --cached --exit-code || {
+            echo "::error::README.md is out of date or modified manually. Please re-run the generate_readme script and commit the result.";
+            exit 1;
+          }
