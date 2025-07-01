@@ -1,3 +1,8 @@
+---
+title: "Visualize Open X-Embodiment dataset"
+blog_post_url: "https://foxglove.dev/blog/foxglove-open-x-embodiment-visualization"
+short_description: "Use Foxglove SDK to visualize berkeley_autolab_ur5 dataset"
+---
 # Visualizing Open X-Embodiment datasets in Foxglove
 
 These are the tutorial files that show how you can visualize Open-X Embodiment dataset in Foxglove.
