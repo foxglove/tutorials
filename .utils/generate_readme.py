@@ -36,7 +36,7 @@ def extract_metadata(readme_path):
         metadata = yaml.safe_load(match.group(1))
     except yaml.YAMLError as e:
         print("Error parsing YAML metadata in", readme_path, ":", e)
-        return None
+        raise e
 
     return metadata
 
