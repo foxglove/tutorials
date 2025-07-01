@@ -18,4 +18,5 @@ To contribute a tutorial, please follow these steps:
         - `blog_post_url` - the url to blog post (optional)
         - `video_url` - the url to the video (optional)
         - `visualize_url` - the url to Foxglove visualization (optional)
-4. Regenerate the main README.md by running `python .utils/generate_readme.py` from the root of the repo (install `.utils/requirements.txt` if needed).
+4. Install generate_readme.py dependencies: `pip install -r .utils/requirements.txt`
+5. Regenerate the main README.md by running `python .utils/generate_readme.py` from the root of the repo
