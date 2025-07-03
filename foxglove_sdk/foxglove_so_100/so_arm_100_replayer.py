@@ -239,17 +239,17 @@ def main():
                     logging.info("Stopping recording...")
                     listener.is_recording = False
                     logging.info(f"Recorded {len(listener.recorded_data)} data points")
-                    # Re-enable torque after recording
-                    follower.bus.enable_torque()
-                    logging.info("Torque enabled - arm is now controlled")
+                    # Disable torque after recording (allow manual movement)
+                    follower.bus.disable_torque()
+                    logging.info("Torque disabled - arm can be moved manually")
                 elif command == CMD_REPLAY:
                     logging.info("Starting replay...")
                     logging.info(f"Replaying {len(listener.recorded_data)} data points")
                     listener.is_replaying = True
                     listener.replay_index = 0
-                    # Disable torque for replay (robot will control movement)
+                    # Enable torque for replay (robot will control movement)
                     follower.bus.enable_torque()
-                    logging.info("Torque disabled - robot will control movement during replay")
+                    logging.info("Torque enabled - robot will control movement during replay")
                 else:
                     logging.warning(f"Unknown command: {command}")
 
@@ -335,9 +335,9 @@ def main():
                     if listener.replay_index >= len(listener.recorded_data):
                         logging.info("Replay completed!")
                         listener.is_replaying = False
-                        # Re-enable torque after replay
-                        follower.bus.enable_torque()
-                        logging.info("Torque enabled - replay complete")
+                        # Disable torque after replay (allow manual movement)
+                        follower.bus.disable_torque()
+                        logging.info("Torque disabled - replay complete, arm can be moved manually")
 
                 # print(f"Joint positions: {joint_positions}")
 
