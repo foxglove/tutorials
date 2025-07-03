@@ -53,6 +53,9 @@ class TopicListener(ServerListener):
         # Recording state
         self.is_recording = False
         self.recorded_data = []
+        # Replay state
+        self.is_replaying = False
+        self.replay_index = 0
 
     def has_subscribers(self) -> bool:
         return len(self.subscribers) > 0
@@ -229,14 +232,24 @@ def main():
                     logging.info("Starting recording...")
                     listener.is_recording = True
                     listener.recorded_data = []  # Clear previous recording
+                    # Disable torque for recording (allow manual movement)
+                    follower.bus.disable_torque()
+                    logging.info("Torque disabled - arm can be moved manually")
                 elif command == CMD_STOP:
                     logging.info("Stopping recording...")
                     listener.is_recording = False
                     logging.info(f"Recorded {len(listener.recorded_data)} data points")
+                    # Re-enable torque after recording
+                    follower.bus.enable_torque()
+                    logging.info("Torque enabled - arm is now controlled")
                 elif command == CMD_REPLAY:
                     logging.info("Starting replay...")
                     logging.info(f"Replaying {len(listener.recorded_data)} data points")
-                    # TODO: Implement replay logic using listener.recorded_data
+                    listener.is_replaying = True
+                    listener.replay_index = 0
+                    # Disable torque for replay (robot will control movement)
+                    follower.bus.enable_torque()
+                    logging.info("Torque disabled - robot will control movement during replay")
                 else:
                     logging.warning(f"Unknown command: {command}")
 
@@ -249,6 +262,11 @@ def main():
             # Show recording status
             if listener.is_recording:
                 print(f"\rRecording... {len(listener.recorded_data)} points captured", end="", flush=True)
+            elif listener.is_replaying:
+                progress = (listener.replay_index / len(listener.recorded_data)) * 100 if listener.recorded_data else 0
+                print(f"\rReplaying... {listener.replay_index}/{len(listener.recorded_data)} ({progress:.1f}%)", end="", flush=True)
+            else:
+                print(f"\rIdle - {len(listener.recorded_data)} points recorded", end="", flush=True)
 
             if not running:
                 break
@@ -292,6 +310,34 @@ def main():
                         'observation': obs.copy()
                     }
                     listener.recorded_data.append(recorded_point)
+
+                # Replay recorded actions if replay is active
+                if listener.is_replaying and listener.replay_index < len(listener.recorded_data):
+                    recorded_point = listener.recorded_data[listener.replay_index]
+                    recorded_obs = recorded_point['observation']
+
+                    # Convert recorded observation to action format for send_action
+                    action = {}
+                    for key, value in recorded_obs.items():
+                        if key.endswith('.pos'):
+                            action[key] = value
+
+                    # Send the recorded action to the robot
+                    try:
+                        sent_action = follower.send_action(action)
+                        logging.debug(f"Replay step {listener.replay_index}: sent action {sent_action}")
+                    except Exception as e:
+                        logging.error(f"Error sending replay action: {e}")
+
+                    listener.replay_index += 1
+
+                    # Check if replay is complete
+                    if listener.replay_index >= len(listener.recorded_data):
+                        logging.info("Replay completed!")
+                        listener.is_replaying = False
+                        # Re-enable torque after replay
+                        follower.bus.enable_torque()
+                        logging.info("Torque enabled - replay complete")
 
                 # print(f"Joint positions: {joint_positions}")
 
