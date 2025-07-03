@@ -45,6 +45,21 @@ CMD_RECORD = "record"
 CMD_STOP = "stop"
 CMD_REPLAY = "replay"
 
+# Custom schema for joint positions
+JOINT_POSITIONS_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "timestamp": {"type": "number", "description": "Timestamp in seconds"},
+        "shoulder_pan": {"type": "number", "description": "Shoulder pan joint position in degrees"},
+        "shoulder_lift": {"type": "number", "description": "Shoulder lift joint position in degrees"},
+        "elbow_flex": {"type": "number", "description": "Elbow flex joint position in degrees"},
+        "wrist_flex": {"type": "number", "description": "Wrist flex joint position in degrees"},
+        "wrist_roll": {"type": "number", "description": "Wrist roll joint position in degrees"},
+        "gripper": {"type": "number", "description": "Gripper position (0-100)"}
+    },
+    "required": ["timestamp", "shoulder_pan", "shoulder_lift", "elbow_flex", "wrist_flex", "wrist_roll", "gripper"]
+}
+
 class TopicListener(ServerListener):
     def __init__(self) -> None:
         # Map client id -> set of subscribed topics
@@ -202,6 +217,18 @@ def main():
     camera.connect()
     image_channel = RawImageChannel(topic="wrist_image")
 
+    # Create channels for joint position data
+    pose_channel = foxglove.Channel(
+        topic="/pose",
+        schema=JOINT_POSITIONS_SCHEMA,
+        message_encoding="json"
+    )
+    pose_setpoint_channel = foxglove.Channel(
+        topic="/pose_setpoint",
+        schema=JOINT_POSITIONS_SCHEMA,
+        message_encoding="json"
+    )
+
     print("Open Foxglove Studio and connect to ws://localhost:8765")
 
     config = SO100FollowerConfig(port="/dev/ttyUSB0", id=ROBOT_NAME, use_degrees=True)
@@ -311,6 +338,18 @@ def main():
                     }
                     listener.recorded_data.append(recorded_point)
 
+                # Stream current joint positions to pose channel
+                current_pose_data = {
+                    'timestamp': time.time(),
+                    'shoulder_pan': obs.get("shoulder_pan.pos", 0.0),
+                    'shoulder_lift': obs.get("shoulder_lift.pos", 0.0),
+                    'elbow_flex': obs.get("elbow_flex.pos", 0.0),
+                    'wrist_flex': obs.get("wrist_flex.pos", 0.0),
+                    'wrist_roll': obs.get("wrist_roll.pos", 0.0),
+                    'gripper': obs.get("gripper.pos", 0.0)
+                }
+                pose_channel.log(current_pose_data)
+
                 # Replay recorded actions if replay is active
                 if listener.is_replaying and listener.replay_index < len(listener.recorded_data):
                     recorded_point = listener.recorded_data[listener.replay_index]
@@ -326,6 +365,19 @@ def main():
                     try:
                         sent_action = follower.send_action(action)
                         logging.debug(f"Replay step {listener.replay_index}: sent action {sent_action}")
+
+                        # Stream target joint positions to pose_setpoint channel
+                        target_pose_data = {
+                            'timestamp': time.time(),
+                            'shoulder_pan': recorded_obs.get("shoulder_pan.pos", 0.0),
+                            'shoulder_lift': recorded_obs.get("shoulder_lift.pos", 0.0),
+                            'elbow_flex': recorded_obs.get("elbow_flex.pos", 0.0),
+                            'wrist_flex': recorded_obs.get("wrist_flex.pos", 0.0),
+                            'wrist_roll': recorded_obs.get("wrist_roll.pos", 0.0),
+                            'gripper': recorded_obs.get("gripper.pos", 0.0)
+                        }
+                        pose_setpoint_channel.log(target_pose_data)
+
                     except Exception as e:
                         logging.error(f"Error sending replay action: {e}")
 
