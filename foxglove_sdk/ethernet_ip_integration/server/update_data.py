@@ -107,6 +107,15 @@ def run(comm):
         comm.Write("High_Temp_Alarm", high_temp_alarm)
         comm.Write("Low_Pressure_Alarm", low_pressure_alarm)
 
+        # Set error codes based on alarm conditions
+        error_code = 0  # Default: no error
+        if high_temp_alarm:
+            error_code = 34  # Temperature error code
+        elif low_pressure_alarm:
+            error_code = 65  # Pressure error code
+
+        comm.Write("Error_Code", error_code)
+
         # Update counters
         if counter % 60 == 0:  # Every minute
             prod_count_result = comm.Read("Production_Count")
