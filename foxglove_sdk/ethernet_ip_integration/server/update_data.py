@@ -9,6 +9,13 @@ def run(comm):
     while True:
         # Temperature simulation with sinusoidal pattern + noise
         base_temp = 75.0 + 8.0 * math.sin(counter * 0.05) + random.uniform(-3, 3)
+
+        # Occasionally create error conditions (1% chance)
+        error_state = random.random() < 0.01
+        if error_state:
+            # Push base temp higher to trigger alarm states
+            base_temp += random.uniform(15, 25)
+
         temp = max(60, min(100, base_temp))
         comm.Write("Temperature", round(temp, 2))
 
@@ -53,12 +60,27 @@ def run(comm):
             power = current * 0.68 + random.uniform(-0.5, 0.5)
             comm.Write("Motor_Power", round(power, 2))
 
-            # Motor temperature rises slowly when running
+            # Motor temperature correlates with base temp and error states
             temp_result = comm.Read("Motor_Temp")
-            temp = temp_result.Value if temp_result.Value is not None else 65.0
+            motor_temp = temp_result.Value if temp_result.Value is not None else 65.0
+
+            # Normal temperature change
             temp_change = random.uniform(-0.5, 1.5)
-            new_temp = max(20, min(120, temp + temp_change))
-            comm.Write("Motor_Temp", round(new_temp, 1))
+
+            # Correlate with base temperature - when base temp is high, motor temp increases more
+            if base_temp > 85:
+                temp_change += (base_temp - 85) * 0.3  # Amplify heating when base temp is high
+
+            # During error states, motor temp can spike unpredictably
+            if error_state:
+                temp_change += random.uniform(5, 15)  # Motor overheating during system errors
+
+            # Occasionally create independent motor overheating (2% chance)
+            if random.random() < 0.02:
+                temp_change += random.uniform(8, 20)
+
+            new_motor_temp = min(120, motor_temp + temp_change*random.uniform(-0.2, 0.3))
+            comm.Write("Motor_Temp", round(new_motor_temp, 1))
 
             # Pump speed varies slightly
             speed = 1750 + random.randint(-75, 75)
