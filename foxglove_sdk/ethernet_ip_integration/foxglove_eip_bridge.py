@@ -98,6 +98,9 @@ def main() -> None:
     foxglove.set_log_level(logging.INFO)
 
     server = foxglove.start_server()
+    now_str = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    file_name = f"foxglove_eip_bridge_{now_str}.mcap"
+    writer = foxglove.open_mcap(file_name) # Comment out if not logging to mcap
 
     # Create channels for all tags
     channels = create_channels()
@@ -141,13 +144,13 @@ def main() -> None:
                         logging.error(f"Error reading tag {tag_name}: {e}")
 
                 time.sleep(0.1)
-
     except KeyboardInterrupt:
         logging.info("Shutting down bridge...")
     except Exception as e:
         logging.error(f"Bridge error: {e}")
     finally:
         server.stop()
+        writer.close()
         logging.info("Bridge stopped")
 
 if __name__ == "__main__":
