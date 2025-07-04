@@ -5,6 +5,8 @@ from pylogix import PLC
 
 def run(comm):
     counter = 0
+    emergency_stop_timer = 0  # Simple countdown timer
+    emergency_stop_duration = 10  # 15 cycles (3 seconds at 0.2s intervals)
 
     while True:
         # Temperature simulation with sinusoidal pattern + noise
@@ -21,6 +23,12 @@ def run(comm):
 
         # Pressure with small variations
         base_pressure = 14.7 + random.uniform(-1, 1)
+
+        # Occasionally create low pressure conditions (1% chance)
+        if random.random() < 0.01:
+            # Drop pressure below alarm threshold
+            base_pressure -= random.uniform(3, 6)
+
         pressure = max(10, min(20, base_pressure))
         comm.Write("Pressure", round(pressure, 2))
 
@@ -48,10 +56,34 @@ def run(comm):
             sensor_val = max(20, min(35, base_val + variation))
             comm.Write(sensor_name, round(sensor_val, 1))
 
+        # Check alarm conditions early for emergency stop logic
+        high_temp_alarm = temp > 90.0
+
+        # Simple emergency stop logic
+        if high_temp_alarm:
+            emergency_stop_timer = emergency_stop_duration  # Reset timer when alarm triggers
+        elif emergency_stop_timer > 0:
+            emergency_stop_timer -= 1  # Count down when temp is OK
+
+        emergency_stop = emergency_stop_timer > 0  # Emergency stop active while timer > 0
+
         # Motor parameters
         motor_running_result = comm.Read("Motor_Running")
         motor_running = motor_running_result.Value if motor_running_result.Value is not None else True
-        if motor_running:
+
+        # Override motor running during emergency stop
+        if emergency_stop:
+            motor_running = False
+            comm.Write("Motor_Running", False)
+            comm.Write("Valve_Position", 0.0)  # Close valve during emergency
+        else:
+            # Restore motor to running when emergency stop clears
+            if not motor_running:
+                motor_running = True
+                comm.Write("Motor_Running", True)
+                comm.Write("Valve_Position", 50.0)  # Restore valve position
+
+        if motor_running and not emergency_stop:
             # Motor current varies with load
             current = 12.5 + random.uniform(-2, 3)
             comm.Write("Motor_Current", round(current, 1))
@@ -59,6 +91,9 @@ def run(comm):
             # Motor power correlates with current
             power = current * 0.68 + random.uniform(-0.5, 0.5)
             comm.Write("Motor_Power", round(power, 2))
+
+            # Motor voltage - normal operating voltage
+            comm.Write("Motor_Voltage", 480.0)
 
             # Motor temperature correlates with base temp and error states
             temp_result = comm.Read("Motor_Temp")
@@ -89,32 +124,38 @@ def run(comm):
             comm.Write("Motor_Current", 0.0)
             comm.Write("Motor_Power", 0.0)
             comm.Write("Pump_Speed", 0)
+            comm.Write("Motor_Voltage", 0.0)
 
         # Vibration simulation
         vib_base = 0.25 + 0.1 * math.sin(counter * 0.3)
         vibration = max(0, vib_base + random.uniform(-0.05, 0.15))
         comm.Write("Vibration", round(vibration, 3))
 
-        # Alarm conditions
-        temp_result = comm.Read("Temperature")
+        # Pressure alarm check (temperature alarm already checked above)
         pressure_result = comm.Read("Pressure")
-        temp_val = temp_result.Value if temp_result.Value is not None else 75.0
         pressure_val = pressure_result.Value if pressure_result.Value is not None else 14.7
-
-        high_temp_alarm = temp_val > 90.0
         low_pressure_alarm = pressure_val < 12.0
 
+        comm.Write("Emergency_Stop", emergency_stop)
         comm.Write("High_Temp_Alarm", high_temp_alarm)
         comm.Write("Low_Pressure_Alarm", low_pressure_alarm)
 
         # Set error codes based on alarm conditions
         error_code = 0  # Default: no error
-        if high_temp_alarm:
+        if emergency_stop:
+            error_code = 10  # Emergency stop error code
+        elif high_temp_alarm:
             error_code = 34  # Temperature error code
         elif low_pressure_alarm:
             error_code = 65  # Pressure error code
 
         comm.Write("Error_Code", error_code)
+
+        # Increment alarm count for any error condition
+        if error_code != 0:
+            alarm_count_result = comm.Read("Alarm_Count")
+            alarm_count = alarm_count_result.Value if alarm_count_result.Value is not None else 0
+            comm.Write("Alarm_Count", alarm_count + 1)
 
         # Update counters
         if counter % 60 == 0:  # Every minute
