@@ -4,6 +4,8 @@ blog_post_url: "TODO"
 short_description: "Using Foxglove data, it's easier than ever to stream time series data. In this project, we show you how."
 ---
 
+![Ethernet/IP data visualization in Foxglove](media/eip_layout.png)
+
 # Use Foxglove for Real-Time Industrial PLC Data Visualization and Playback
 
 In this tutorial, we implement a simple script to stream values of Ethernet/IP tags to Foxglove. The example includes a simulated plant to demonstrate this proof of concept.
