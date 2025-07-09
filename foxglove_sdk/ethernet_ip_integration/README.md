@@ -1,6 +1,6 @@
 ---
 title: "Using Foxglove to Visualize Ethernet/IP data"
-blog_post_url: "TODO"
+blog_post_url: "https://foxglove.dev/blog/use-foxglove-sdk-for-real-time-industrial-plc-data-visualization-and-playback"
 short_description: "Using Foxglove data, it's easier than ever to stream time series data. In this project, we show you how."
 ---
 
@@ -35,3 +35,5 @@ If successful, it should start Foxglove server and show the following output:
 
 ## Viewing the data
 To view the data, start Foxglove and open a new connection to `ws://localhost:8765`. If everything is well, you will see several topics derived from EIP tags. Now, you should be able to load different panels and view the data. You can use a layout in `foxglove_sdk/ethernet_ip_integration/layouts/eip_layout.json`.
+
+Alternatively, you can open our [logged MCAP file](foxglove_sdk/ethernet_ip_integration/mcap/foxglove_eip_bridge_2025-07-04_17-53-27.mcap) and view our recording of a simulated run.

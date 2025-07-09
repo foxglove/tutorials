@@ -24,6 +24,9 @@ Below is a list of all tutorials available in this repository:
 - 📊 [Visualize](https://app.foxglove.dev/~/view?ds=foxglove-sample-stream&ds.recordingId=vqKKQcot421Kwg84&ds.overrideLayoutId=b7513959-1d46-4a89-bc24-1584d9677ca1&ds.start=2023-09-01T13:19:45.047438263Z&ds.end=2023-09-01T13:20:15.047438263Z)
 
 ## Foxglove SDK
+### [Using Foxglove to Visualize Ethernet/IP data](foxglove_sdk/ethernet_ip_integration/README.md)
+- 📝 Using Foxglove data, it's easier than ever to stream time series data. In this project, we show you how.
+- 🔗 [Related Blog Post](https://foxglove.dev/blog/use-foxglove-sdk-for-real-time-industrial-plc-data-visualization-and-playback)
 ### [Visualizing LeRobot (SO-100) using Foxglove](foxglove_sdk/foxglove_so_100/README.md)
 - 📝 Use LeRobot API and Foxglove SDK to visualize SO-100 state in real-time
 - 🔗 [Related Blog Post](https://foxglove.dev/blog/visualizing-lerobot-so-100-using-foxglove)
