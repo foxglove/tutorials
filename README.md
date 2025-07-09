@@ -18,6 +18,9 @@ Below is a list of all tutorials available in this repository:
 - 🔗 [Related Blog Post](https://foxglove.dev/blog/converting-the-lafan1-retargeting-dataset-to-mcap)
 - 🎥 [Video](https://youtu.be/YlAblmWLVqs)
 - 📊 [Visualize](https://app.foxglove.dev/~/view?ds=foxglove-sample-stream&ds.recordingId=rec_0dVfPhEze7PkjHHi&layoutId=lay_0dVfPwEqAQ5JMmle)
+### [Visualize Open X-Embodiment dataset](datasets/open_x_embodiment/README.md)
+- 📝 Use Foxglove SDK to visualize berkeley_autolab_ur5 dataset
+- 🔗 [Related Blog Post](https://foxglove.dev/blog/foxglove-open-x-embodiment-visualization)
 ### [SubPipe Dataset to MCAP](datasets/subpipe_mcap/README.md)
 - 📝 The underwater dataset, containing SLAM, object detection and image segmentation
 - 🎥 [Video](https://youtu.be/jJej6aT1jKg)
