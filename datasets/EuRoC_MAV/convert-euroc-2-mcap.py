@@ -1,8 +1,3 @@
-# This script is used to convert the Euroc dataset to MCAP format
-# Author: Carson Kohlbrenner
-# Date: 2025-06-27
-
-
 import foxglove
 import argparse
 import os
@@ -17,8 +12,9 @@ from geometry_msgs.msg import Quaternion, Vector3
 from rclpy.serialization import serialize_message
 from pathlib import Path
 
-def getImageMsg(img_path: str, timestamp: int, cam_num: int) -> Image:
-    # Load as grayscale image data
+
+def get_image_msg(img_path: str, timestamp: int, cam_num: int) -> Image:
+    # Stereo images should be loaded in as grayscale
     img = cv2.imread(img_path, cv2.IMREAD_GRAYSCALE)
     if img is None:
         raise ValueError(f"Could not load image: {img_path}")
@@ -28,23 +24,25 @@ def getImageMsg(img_path: str, timestamp: int, cam_num: int) -> Image:
     sec = int(timestamp // 1e9)
     nsec = int(timestamp % 1e9)
 
-    # Fill in the image message data
+    # Populate the image message data
     ros_image = Image()
     ros_image.header = Header()
     ros_image.header.stamp.sec = sec
     ros_image.header.stamp.nanosec = nsec
-    ros_image.header.frame_id = "cam"+str(cam_num)
+    ros_image.header.frame_id = f"cam{cam_num}"
     ros_image.height = height
     ros_image.width = width
-    ros_image.encoding = "mono8" #Stereo images
+    ros_image.encoding = "mono8"  # Stereo images
     ros_image.step = width  # For mono8, 1 byte per pixel
     ros_image.data = img.tobytes()
 
     return ros_image
 
-def read_images(cam_directory, channel, cam_num):
+
+def read_images(cam_directory: str, channel: Channel, cam_num: int) -> None:
     # Loop through the data.csv file and read in the image files
-    with open(cam_directory + "/data.csv", "r") as csv_file:
+    csv_path = os.path.join(cam_directory, "data.csv")
+    with open(csv_path, "r") as csv_file:
         reader = csv.reader(csv_file)
         next(reader)  # Skip the first row with headers
         for row in reader:
@@ -56,11 +54,13 @@ def read_images(cam_directory, channel, cam_num):
                 continue
 
             # Convert image to ROS2 message and write to channel
-            image_msg = getImageMsg(image_path, timestamp, cam_num)
+            image_msg = get_image_msg(image_path, timestamp, cam_num)
             channel.log(serialize_message(image_msg), log_time=timestamp)
 
-def read_imu(imu_data_path, imu_channel, imu_yaml_path):
-    '''
+
+def read_imu(imu_data_path: str, imu_channel: Channel, imu_yaml_path: str) -> None:
+    """Read IMU data and write to MCAP channel.
+    
     IMU data is in the format:
     timestamp [ns],w_RS_S_x [rad s^-1],w_RS_S_y [rad s^-1],w_RS_S_z [rad s^-1],a_RS_S_x [m s^-2],a_RS_S_y [m s^-2],a_RS_S_z [m s^-2]
 
@@ -73,19 +73,23 @@ def read_imu(imu_data_path, imu_channel, imu_yaml_path):
      - angular velocity covariance (float32[9])
      - linear acceleration (vector3)
      - linear acceleration covariance (float32[9])
-    '''
-
+     
+    Args:
+        imu_data_path: Path to IMU data CSV file
+        imu_channel: MCAP channel to write IMU messages to
+        imu_yaml_path: Path to IMU configuration YAML file
+    """
     # Get the IMU config with covariance information
     with open(imu_yaml_path, "r") as imu_yaml_file:
         imu_yaml = yaml.load(imu_yaml_file, Loader=yaml.FullLoader)
 
     # Get the noise and bias parameters, see https://github.com/ethz-asl/kalibr/wiki/IMU-Noise-Model for more details
-    sample_sqr_dt = np.sqrt(1.0/float(imu_yaml["rate_hz"]))
-    sigma_gd = imu_yaml["gyroscope_noise_density"]*sample_sqr_dt
-    sigma_ad = imu_yaml["accelerometer_noise_density"]*sample_sqr_dt
+    sample_sqr_dt = np.sqrt(1.0 / float(imu_yaml["rate_hz"]))
+    sigma_gd = imu_yaml["gyroscope_noise_density"] * sample_sqr_dt
+    sigma_ad = imu_yaml["accelerometer_noise_density"] * sample_sqr_dt
 
     # Calculate the covariance matrices
-    orientation_cov = np.zeros((3,3), dtype=np.float64)
+    orientation_cov = np.zeros((3, 3), dtype=np.float64)
     angular_velocity_cov = np.diag([sigma_gd**2, sigma_gd**2, sigma_gd**2]).astype(np.float64)
     linear_acceleration_cov = np.diag([sigma_ad**2, sigma_ad**2, sigma_ad**2]).astype(np.float64)
 
@@ -101,7 +105,7 @@ def read_imu(imu_data_path, imu_channel, imu_yaml_path):
             imu_msg.header = Header()
             imu_msg.header.stamp.sec = timestamp // int(1e9)
             imu_msg.header.stamp.nanosec = timestamp % int(1e9)
-            imu_msg.header.frame_id = "imu4" # Transformation reference frame
+            imu_msg.header.frame_id = "imu4"  # Transformation reference frame
             # Orientation
             imu_msg.orientation = Quaternion()
             imu_msg.orientation.x = 0.0
@@ -124,24 +128,19 @@ def read_imu(imu_data_path, imu_channel, imu_yaml_path):
 
             imu_channel.log(serialize_message(imu_msg), log_time=timestamp)
 
-if __name__ == "__main__":
+
+def main() -> None:
     parser = argparse.ArgumentParser(description='Convert Euroc dataset to MCAP format')
     parser.add_argument('--src', type=str, required=True, help='Path to the Euroc dataset directory')
     parser.add_argument('--dst', type=str, required=True, help='Path to the output MCAP file')
     args = parser.parse_args()
 
     out_mcap_path = args.dst
-    if os.path.exists(out_mcap_path): # Remove the previous file if it already exists
+    if os.path.exists(out_mcap_path):  # Remove the previous file if it already exists
         os.remove(out_mcap_path)
     
-    writer = foxglove.open_mcap(out_mcap_path, allow_overwrite=True) # Open the mcap file for writing
+    writer = foxglove.open_mcap(out_mcap_path, allow_overwrite=True)  # Open the mcap file for writing
 
-    # Define the schemas for our topics
-    # get the .msg file that ROS installs
-    # image_msg_path = Path(
-    #     get_package_share_directory("sensor_msgs")) / "msg" / "Image.msg"
-    # imu_msg_path = Path(
-    #     get_package_share_directory("sensor_msgs")) / "msg" / "Imu.msg"
     imu_msg_path = Path("msgs/imu_flat.msg")
     img_msg_path = Path("msgs/image_flat.msg")
 
@@ -168,11 +167,14 @@ if __name__ == "__main__":
     imu_dir = os.path.join(args.src, "imu0", "data.csv")
     imu_yaml_path = os.path.join(args.src, "imu0", "sensor.yaml")
 
-
     read_images(cam0_dir, cam0_channel, 0)
     print("Done writing cam0")
     read_images(cam1_dir, cam1_channel, 1)
     print("Done writing cam1")
     read_imu(imu_dir, imu_channel, imu_yaml_path)
     print("Done writing imu")
+
+
+if __name__ == "__main__":
+    main()
     

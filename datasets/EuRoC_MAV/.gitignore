@@ -1,0 +1,3 @@
+*.mcap
+data/*
+.env
