@@ -1,0 +1,743 @@
+{
+  "configById": {
+    "3D!1olov4a": {
+      "cameraState": {
+        "distance": 10.266841665529618,
+        "perspective": true,
+        "phi": 58.241932766782014,
+        "target": [
+          0,
+          0,
+          0
+        ],
+        "targetOffset": [
+          -2.629183925738109,
+          3.3714109280618723,
+          -1.895344253070008e-16
+        ],
+        "targetOrientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "thetaOffset": -83.4596551528181,
+        "fovy": 45,
+        "near": 0.5,
+        "far": 5000
+      },
+      "followMode": "follow-pose",
+      "scene": {
+        "transforms": {
+          "showLabel": false,
+          "labelSize": 0.02,
+          "visible": true,
+          "axisScale": 0.632,
+          "editable": false
+        }
+      },
+      "transforms": {
+        "frame:vicon/firefly_sbx/firefly_sbx": {
+          "visible": false
+        },
+        "frame:base_link_gt": {
+          "visible": false
+        },
+        "frame:firefly/base_link": {
+          "visible": false
+        },
+        "frame:firefly/base_link_inertia": {
+          "visible": false
+        },
+        "frame:cam0": {
+          "visible": false
+        },
+        "frame:cam1": {
+          "visible": false
+        },
+        "frame:imu4": {
+          "visible": false
+        },
+        "frame:base_link": {
+          "visible": true
+        },
+        "frame:odom": {
+          "visible": true
+        },
+        "frame:map": {
+          "visible": true
+        },
+        "frame:firefly/rotor_1": {
+          "rpyCoefficient": [
+            0,
+            0,
+            -180
+          ],
+          "visible": false
+        },
+        "frame:firefly/rotor_0": {
+          "rpyCoefficient": [
+            0,
+            0,
+            -180
+          ],
+          "visible": false
+        },
+        "frame:firefly/rotor_4": {
+          "rpyCoefficient": [
+            0,
+            0,
+            84.6
+          ],
+          "visible": false
+        },
+        "frame:rotor_1": {
+          "rpyCoefficient": [
+            0,
+            0,
+            22.399999999999995
+          ],
+          "visible": false
+        },
+        "frame:rotor_0": {
+          "rpyCoefficient": [
+            0,
+            0,
+            50.60000000000001
+          ],
+          "visible": false
+        },
+        "frame:rotor_3": {
+          "rpyCoefficient": [
+            0,
+            0,
+            148.6
+          ],
+          "visible": false
+        },
+        "frame:rotor_2": {
+          "visible": false
+        },
+        "frame:rotor_4": {
+          "visible": false
+        },
+        "frame:rotor_5": {
+          "visible": false
+        },
+        "frame:base_link_inertia": {
+          "visible": false
+        },
+        "frame:firefly/rotor_2": {
+          "visible": false
+        },
+        "frame:firefly/rotor_3": {
+          "visible": false
+        },
+        "frame:firefly/rotor_5": {
+          "visible": false
+        },
+        "frame:world": {
+          "visible": true
+        }
+      },
+      "topics": {
+        "/cloud_ground": {
+          "visible": true,
+          "colorField": "rgb",
+          "colorMode": "rgb",
+          "colorMap": "turbo",
+          "pointSize": 3,
+          "minValue": 0,
+          "maxValue": 30
+        },
+        "/cloud_map": {
+          "visible": true,
+          "colorField": "rgb",
+          "colorMode": "rgb",
+          "colorMap": "turbo",
+          "pointSize": 3,
+          "maxValue": 30.3851,
+          "minValue": 0
+        },
+        "/cloud_obstacles": {
+          "visible": true,
+          "colorField": "rgb",
+          "colorMode": "rgb",
+          "colorMap": "turbo",
+          "pointSize": 3,
+          "stixelsEnabled": false,
+          "minValue": 0,
+          "maxValue": 30
+        },
+        "/local_grid_empty": {
+          "visible": false
+        },
+        "/local_grid_ground": {
+          "visible": false
+        },
+        "/local_grid_obstacle": {
+          "visible": false
+        },
+        "/odom_local_map": {
+          "visible": false,
+          "colorField": "rgb",
+          "colorMode": "rgb",
+          "colorMap": "turbo",
+          "pointSize": 1.5
+        },
+        "/odom_last_frame": {
+          "visible": false,
+          "colorField": "z",
+          "colorMode": "colormap",
+          "colorMap": "turbo"
+        },
+        "/odom_local_scan_map": {
+          "visible": false,
+          "pointSize": 6.72
+        },
+        "/robot_description": {
+          "visible": false,
+          "showOutlines": true,
+          "displayMode": "collision",
+          "opacity": 1,
+          "links": {
+            "rotor_0": {
+              "visible": true
+            },
+            "firefly/base_link": {
+              "visible": true
+            },
+            "firefly/rotor_0": {
+              "visible": true
+            }
+          },
+          "fallbackColor": "7c6bffff",
+          "showAxis": false,
+          "axisScale": 0.25
+        },
+        "/local_path": {
+          "visible": false,
+          "lineWidth": 4.0226
+        },
+        "/cam0/image_raw": {
+          "visible": false,
+          "distance": 0.076,
+          "cameraInfoTopic": "/stereo_camera/left/camera_info"
+        },
+        "/stereo_camera/left/image_color": {
+          "visible": false,
+          "frameLocked": true,
+          "cameraInfoTopic": "/stereo_camera/left/camera_info",
+          "planarProjectionFactor": 0,
+          "color": "#ffffff40",
+          "distance": 0.3
+        },
+        "/stereo_camera/left/camera_info": {
+          "visible": false,
+          "distance": 0.3,
+          "width": 0.005,
+          "color": "#7c6bffff"
+        },
+        "/stereo_camera/right/camera_info": {
+          "visible": false
+        },
+        "/stereo_camera/right/image_color/compressed": {
+          "visible": false
+        },
+        "/stereo_camera/right/image_color": {
+          "visible": false,
+          "frameLocked": true,
+          "cameraInfoTopic": "/stereo_camera/right/camera_info",
+          "distance": 1,
+          "planarProjectionFactor": 0,
+          "color": "#ffffff"
+        },
+        "/global_path": {
+          "visible": false
+        },
+        "/mapPath": {
+          "visible": true,
+          "lineWidth": 0.0298,
+          "gradient": [
+            "#ffffff40",
+            "#82ff88ff"
+          ]
+        },
+        "/localization_pose": {
+          "visible": false
+        },
+        "/goal": {
+          "visible": false
+        },
+        "/goal_out": {
+          "visible": false
+        },
+        "/landmarks": {
+          "visible": false
+        }
+      },
+      "layers": {
+        "grid": {
+          "visible": false,
+          "frameLocked": true,
+          "label": "Grid",
+          "instanceId": "45fc1d0b-01ee-4ba4-8d89-cd6a6ce5aaf5",
+          "layerId": "foxglove.Grid",
+          "frameId": "world",
+          "size": 10,
+          "divisions": 10,
+          "lineWidth": 1,
+          "color": "#248eff",
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ]
+        },
+        "aa62192e-7ac7-4588-8016-908eda65a1fa": {
+          "displayMode": "visual",
+          "fallbackColor": "#ffffff",
+          "showAxis": false,
+          "axisScale": 1,
+          "showOutlines": true,
+          "opacity": 1,
+          "visible": true,
+          "frameLocked": true,
+          "instanceId": "aa62192e-7ac7-4588-8016-908eda65a1fa",
+          "label": "URDF",
+          "layerId": "foxglove.Urdf",
+          "sourceType": "url",
+          "url": "https://cdn.jsdelivr.net/gh/cKohl10/tutorials@main/datasets/EuRoC_MAV/ros2_ws/src/euroc_slam/urdf/firefly_url.urdf",
+          "filePath": "",
+          "parameter": "",
+          "topic": "",
+          "framePrefix": "",
+          "order": 1
+        }
+      },
+      "publish": {
+        "type": "point",
+        "poseTopic": "/move_base_simple/goal",
+        "pointTopic": "/clicked_point",
+        "poseEstimateTopic": "/initialpose",
+        "poseEstimateXDeviation": 0.5,
+        "poseEstimateYDeviation": 0.5,
+        "poseEstimateThetaDeviation": 0.26179939
+      },
+      "imageMode": {},
+      "followTf": "world"
+    },
+    "3D!2hjtaq6": {
+      "cameraState": {
+        "distance": 1.020937373671968,
+        "perspective": true,
+        "phi": 74.03298350824883,
+        "target": [
+          0,
+          0,
+          0
+        ],
+        "targetOffset": [
+          -0.00042604209219607224,
+          0.0011943089130383906,
+          1.407789781828545e-19
+        ],
+        "targetOrientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "thetaOffset": 90.3373313343349,
+        "fovy": 45,
+        "near": 0.5,
+        "far": 5000
+      },
+      "followMode": "follow-pose",
+      "followTf": "base_link",
+      "scene": {
+        "transforms": {
+          "visible": true,
+          "showLabel": false,
+          "axisScale": 0.245
+        }
+      },
+      "transforms": {
+        "frame:vicon/firefly_sbx/firefly_sbx": {
+          "visible": false
+        },
+        "frame:base_link_gt": {
+          "visible": false
+        },
+        "frame:world": {
+          "visible": false
+        },
+        "frame:map": {
+          "visible": false
+        },
+        "frame:odom": {
+          "visible": false
+        },
+        "frame:firefly/base_link": {
+          "visible": true
+        },
+        "frame:firefly/base_link_inertia": {
+          "visible": false
+        },
+        "frame:firefly/rotor_0": {
+          "visible": true
+        },
+        "frame:firefly/rotor_1": {
+          "visible": true
+        },
+        "frame:firefly/rotor_2": {
+          "visible": true
+        },
+        "frame:firefly/rotor_3": {
+          "visible": true
+        },
+        "frame:base_link": {
+          "visible": false
+        },
+        "frame:imu4": {
+          "visible": false
+        },
+        "frame:cam0": {
+          "visible": false
+        },
+        "frame:cam1": {
+          "visible": false
+        }
+      },
+      "topics": {
+        "/robot_description": {
+          "visible": false,
+          "opacity": 1,
+          "displayMode": "collision",
+          "fallbackColor": "#7c6bff"
+        },
+        "/cloud_obstacles": {
+          "visible": true,
+          "colorField": "rgb",
+          "colorMode": "rgb",
+          "colorMap": "turbo"
+        },
+        "/cloud_map": {
+          "visible": true,
+          "colorField": "rgb",
+          "colorMode": "rgb",
+          "colorMap": "turbo"
+        },
+        "/cloud_ground": {
+          "visible": true,
+          "colorField": "rgb",
+          "colorMode": "rgb",
+          "colorMap": "turbo"
+        },
+        "/local_grid_empty": {
+          "visible": false
+        },
+        "/local_grid_ground": {
+          "visible": false
+        },
+        "/local_grid_obstacle": {
+          "visible": false
+        },
+        "/octomap_ground": {
+          "visible": true,
+          "colorField": "rgb",
+          "colorMode": "rgb",
+          "colorMap": "turbo",
+          "pointSize": 4
+        },
+        "/octomap_obstacles": {
+          "visible": true,
+          "colorField": "rgb",
+          "colorMode": "rgb",
+          "colorMap": "turbo",
+          "pointSize": 4
+        },
+        "/octomap_occupied_space": {
+          "visible": true,
+          "colorField": "rgb",
+          "colorMode": "rgb",
+          "colorMap": "turbo",
+          "pointSize": 4
+        },
+        "/odom_last_frame": {
+          "visible": true,
+          "colorField": "z",
+          "colorMode": "colormap",
+          "colorMap": "turbo",
+          "pointSize": 4
+        },
+        "/odom_local_map": {
+          "visible": true,
+          "colorField": "rgb",
+          "colorMode": "rgb",
+          "colorMap": "turbo",
+          "pointSize": 4
+        },
+        "/odom_local_scan_map": {
+          "visible": true,
+          "pointSize": 4
+        },
+        "/stereo_camera/left/camera_info": {
+          "visible": true,
+          "distance": 0.25,
+          "color": "#33ff0066"
+        },
+        "/stereo_camera/left/image_color": {
+          "visible": true,
+          "frameLocked": true,
+          "cameraInfoTopic": "/stereo_camera/left/camera_info",
+          "distance": 0.25,
+          "planarProjectionFactor": 0,
+          "color": "#ffffff91"
+        },
+        "/cam1/image_raw": {
+          "visible": false
+        },
+        "/cam0/image_raw": {
+          "visible": false,
+          "cameraInfoTopic": "/stereo_camera/left/camera_info",
+          "distance": 0.379,
+          "color": "#ff9999ff"
+        }
+      },
+      "layers": {
+        "grid": {
+          "visible": false,
+          "frameLocked": true,
+          "label": "Grid",
+          "instanceId": "8822c6fc-a84d-4646-a09c-11abad4be96e",
+          "layerId": "foxglove.Grid",
+          "size": 10,
+          "divisions": 10,
+          "lineWidth": 1,
+          "color": "#248eff",
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ]
+        },
+        "09b75daa-dca9-4285-9170-0a3abb65d0c3": {
+          "displayMode": "auto",
+          "fallbackColor": "#ffffff",
+          "showAxis": false,
+          "axisScale": 1,
+          "showOutlines": true,
+          "opacity": 1,
+          "visible": true,
+          "frameLocked": true,
+          "instanceId": "09b75daa-dca9-4285-9170-0a3abb65d0c3",
+          "label": "URDF",
+          "layerId": "foxglove.Urdf",
+          "sourceType": "url",
+          "url": "https://cdn.jsdelivr.net/gh/cKohl10/tutorials@main/datasets/EuRoC_MAV/ros2_ws/src/euroc_slam/urdf/firefly_url.urdfhttps://cdn.jsdelivr.net/gh/cKohl10/tutorials@main/datasets/EuRoC_MAV/ros2_ws/src/euroc_slam/urdf/firefly_url.urdf",
+          "filePath": "",
+          "parameter": "",
+          "topic": "",
+          "framePrefix": "",
+          "order": 1
+        }
+      },
+      "publish": {
+        "type": "point",
+        "poseTopic": "/move_base_simple/goal",
+        "pointTopic": "/clicked_point",
+        "poseEstimateTopic": "/initialpose",
+        "poseEstimateXDeviation": 0.5,
+        "poseEstimateYDeviation": 0.5,
+        "poseEstimateThetaDeviation": 0.26179939
+      },
+      "imageMode": {}
+    },
+    "Image!2s8oxaz": {
+      "cameraState": {
+        "distance": 20,
+        "perspective": true,
+        "phi": 60,
+        "target": [
+          0,
+          0,
+          0
+        ],
+        "targetOffset": [
+          0,
+          0,
+          0
+        ],
+        "targetOrientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "thetaOffset": 45,
+        "fovy": 45,
+        "near": 0.5,
+        "far": 5000
+      },
+      "followMode": "follow-pose",
+      "scene": {},
+      "transforms": {},
+      "topics": {
+        "/local_grid_obstacle": {
+          "visible": false
+        },
+        "/local_grid_ground": {
+          "visible": false
+        },
+        "/local_grid_empty": {
+          "visible": false
+        },
+        "/cloud_obstacles": {
+          "visible": false
+        },
+        "/cloud_map": {
+          "visible": false,
+          "colorField": "rgb",
+          "colorMode": "rgb",
+          "colorMap": "turbo"
+        },
+        "/odom_local_scan_map": {
+          "visible": false
+        },
+        "/odom_local_map": {
+          "visible": true,
+          "colorField": "rgb",
+          "colorMode": "rgb",
+          "colorMap": "turbo",
+          "pointSize": 3.74
+        },
+        "/local_path": {
+          "visible": false,
+          "lineWidth": 0.238,
+          "gradient": [
+            "#ab005eff",
+            "#ff124180"
+          ],
+          "type": "line"
+        },
+        "/mapPath": {
+          "visible": false,
+          "lineWidth": 0.2186
+        },
+        "/global_path": {
+          "visible": false
+        },
+        "/map": {
+          "visible": false
+        },
+        "/labels": {
+          "visible": false
+        }
+      },
+      "layers": {},
+      "publish": {
+        "type": "point",
+        "poseTopic": "/move_base_simple/goal",
+        "pointTopic": "/clicked_point",
+        "poseEstimateTopic": "/initialpose",
+        "poseEstimateXDeviation": 0.5,
+        "poseEstimateYDeviation": 0.5,
+        "poseEstimateThetaDeviation": 0.26179939
+      },
+      "imageMode": {
+        "imageTopic": "/cam0/image_raw",
+        "calibrationTopic": "/stereo_camera/left/camera_info"
+      }
+    },
+    "Plot!40eigil": {
+      "paths": [
+        {
+          "timestampMethod": "receiveTime",
+          "value": "/imu0.angular_velocity.x",
+          "enabled": true,
+          "color": "#4e98e2",
+          "label": "Angular Velocity X",
+          "lineSize": 2
+        },
+        {
+          "timestampMethod": "receiveTime",
+          "value": "/imu0.angular_velocity.y",
+          "enabled": true,
+          "color": "#f5774d",
+          "label": "Angular Velocity Y",
+          "lineSize": 2
+        },
+        {
+          "timestampMethod": "receiveTime",
+          "value": "/imu0.angular_velocity.z",
+          "enabled": true,
+          "color": "#f7df71",
+          "label": "Angular Velocity Z",
+          "lineSize": 2
+        }
+      ],
+      "showXAxisLabels": true,
+      "showYAxisLabels": true,
+      "showLegend": true,
+      "legendDisplay": "floating",
+      "showPlotValuesInLegend": false,
+      "isSynced": true,
+      "xAxisVal": "timestamp",
+      "sidebarDimension": 240,
+      "timeWindowMode": "sliding",
+      "followingViewWidth": 20,
+      "xAxisLabel": "Time (s)",
+      "yAxisLabel": "Angular Velocity (rad/s)",
+      "foxglovePanelTitle": "IMU0 Data"
+    },
+    "Gauge!1r58yff": {
+      "path": "/tf.transforms[:]{child_frame_id==\"base_link\"}.transform.translation.z",
+      "minValue": -3,
+      "maxValue": 2,
+      "colorMap": "red-yellow-green",
+      "colorMode": "colormap",
+      "gradient": [
+        "#0000ff",
+        "#ff00ff"
+      ],
+      "reverse": false,
+      "foxglovePanelTitle": "Altitude"
+    }
+  },
+  "globalVariables": {},
+  "userNodes": {},
+  "playbackConfig": {
+    "speed": 1
+  },
+  "layout": {
+    "first": {
+      "first": "3D!1olov4a",
+      "second": {
+        "first": "3D!2hjtaq6",
+        "second": "Image!2s8oxaz",
+        "direction": "column"
+      },
+      "direction": "row",
+      "splitPercentage": 65.51012940354613
+    },
+    "second": {
+      "first": "Plot!40eigil",
+      "second": "Gauge!1r58yff",
+      "direction": "row",
+      "splitPercentage": 80.73251056185755
+    },
+    "direction": "column",
+    "splitPercentage": 68.81258941344778
+  }
+}
