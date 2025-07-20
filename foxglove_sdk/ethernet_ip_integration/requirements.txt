@@ -1,0 +1,4 @@
+foxglove-sdk
+cpppo
+pylogix
+numpy

@@ -1,0 +1,204 @@
+{
+  "configById": {
+    "Plot!184cdea": {
+      "paths": [
+        {
+          "value": "/eip/temperature.value",
+          "enabled": true,
+          "timestampMethod": "receiveTime",
+          "color": "#4e98e2"
+        },
+        {
+          "value": "/eip/setpoint_temp.value",
+          "enabled": true,
+          "timestampMethod": "receiveTime",
+          "color": "#f5774d"
+        }
+      ],
+      "showXAxisLabels": true,
+      "showYAxisLabels": true,
+      "showLegend": true,
+      "legendDisplay": "floating",
+      "showPlotValuesInLegend": false,
+      "isSynced": true,
+      "xAxisVal": "timestamp",
+      "sidebarDimension": 240,
+      "foxglovePanelTitle": "Temperature"
+    },
+    "Plot!1av206g": {
+      "paths": [
+        {
+          "value": "/eip/pressure.value",
+          "enabled": true,
+          "timestampMethod": "receiveTime",
+          "color": "#4e98e2"
+        },
+        {
+          "value": "/eip/setpoint_pressure.value",
+          "enabled": true,
+          "timestampMethod": "receiveTime",
+          "color": "#f5774d"
+        }
+      ],
+      "showXAxisLabels": true,
+      "showYAxisLabels": true,
+      "showLegend": true,
+      "legendDisplay": "floating",
+      "showPlotValuesInLegend": false,
+      "isSynced": true,
+      "xAxisVal": "timestamp",
+      "sidebarDimension": 240,
+      "foxglovePanelTitle": "Pressure"
+    },
+    "Plot!1jhdc3c": {
+      "paths": [
+        {
+          "value": "/eip/flow_rate.value",
+          "enabled": true,
+          "timestampMethod": "receiveTime",
+          "color": "#4e98e2"
+        },
+        {
+          "value": "/eip/setpoint_flow.value",
+          "enabled": true,
+          "timestampMethod": "receiveTime",
+          "color": "#f5774d"
+        }
+      ],
+      "showXAxisLabels": true,
+      "showYAxisLabels": true,
+      "showLegend": true,
+      "legendDisplay": "floating",
+      "showPlotValuesInLegend": false,
+      "isSynced": true,
+      "xAxisVal": "timestamp",
+      "sidebarDimension": 240,
+      "foxglovePanelTitle": "Flow Rate"
+    },
+    "Plot!4is19vl": {
+      "paths": [
+        {
+          "value": "/eip/tank_level_1.value",
+          "enabled": true,
+          "timestampMethod": "receiveTime",
+          "color": "#4e98e2"
+        },
+        {
+          "value": "/eip/tank_level_2.value",
+          "enabled": true,
+          "timestampMethod": "receiveTime",
+          "color": "#f5774d"
+        },
+        {
+          "value": "/eip/tank_level_3.value",
+          "enabled": true,
+          "timestampMethod": "receiveTime",
+          "color": "#f7df71"
+        },
+        {
+          "value": "/eip/tank_level_4.value",
+          "enabled": true,
+          "timestampMethod": "receiveTime",
+          "color": "#5cd6a9"
+        }
+      ],
+      "showXAxisLabels": true,
+      "showYAxisLabels": true,
+      "showLegend": true,
+      "legendDisplay": "floating",
+      "showPlotValuesInLegend": false,
+      "isSynced": true,
+      "xAxisVal": "timestamp",
+      "sidebarDimension": 240,
+      "foxglovePanelTitle": "Tank levels"
+    },
+    "Gauge!253gadd": {
+      "path": "/eip/temperature.value",
+      "minValue": 63,
+      "maxValue": 81,
+      "colorMap": "red-yellow-green",
+      "colorMode": "colormap",
+      "gradient": [
+        "#0000ff",
+        "#ff00ff"
+      ],
+      "reverse": true,
+      "foxglovePanelTitle": "Temperature"
+    },
+    "Indicator!4ftxi1h": {
+      "path": "/eip/emergency_stop.value",
+      "style": "bulb",
+      "fontSize": 36,
+      "fallbackColor": "#1bbf33",
+      "fallbackLabel": "ESTOP OFF",
+      "rules": [
+        {
+          "operator": "=",
+          "rawValue": "true",
+          "color": "#e34b4b",
+          "label": "ESTOP ON"
+        }
+      ],
+      "foxglovePanelTitle": "ESTOP"
+    },
+    "StateTransitions!9ldf0u": {
+      "paths": [
+        {
+          "value": "/eip/low_pressure_alarm.value",
+          "timestampMethod": "receiveTime",
+          "label": "Low Pressure"
+        },
+        {
+          "value": "/eip/high_temp_alarm.value",
+          "timestampMethod": "receiveTime",
+          "label": "Temperature Alarm"
+        },
+        {
+          "value": "/eip/emergency_stop.value",
+          "timestampMethod": "receiveTime",
+          "label": "Emergency STOP"
+        },
+        {
+          "value": "/eip/error_code.value",
+          "timestampMethod": "receiveTime",
+          "label": "ERROR CODE"
+        }
+      ],
+      "isSynced": true,
+      "timeWindowMode": "automatic",
+      "showPoints": true
+    }
+  },
+  "globalVariables": {},
+  "userNodes": {},
+  "playbackConfig": {
+    "speed": 1
+  },
+  "layout": {
+    "first": {
+      "first": {
+        "first": "Plot!184cdea",
+        "second": "Plot!1av206g",
+        "direction": "column"
+      },
+      "second": "Plot!1jhdc3c",
+      "direction": "column",
+      "splitPercentage": 65.98579040852576
+    },
+    "second": {
+      "first": {
+        "first": "Plot!4is19vl",
+        "second": {
+          "first": "Gauge!253gadd",
+          "second": "Indicator!4ftxi1h",
+          "direction": "column"
+        },
+        "direction": "row",
+        "splitPercentage": 49.588347055098154
+      },
+      "second": "StateTransitions!9ldf0u",
+      "direction": "column"
+    },
+    "direction": "row"
+  }
+}
