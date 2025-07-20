@@ -1,8 +1,5 @@
 ---
 title: "EuRoC MAV Dataset in Foxglove"
-video_url: "TODO"
-blog_post_url: "TODO"
-visualize_url: "TODO"
 short_description: "Drone SLAM of the MH01 Environment from EuRoC MAV"
 ---
 
