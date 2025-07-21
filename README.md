@@ -10,6 +10,7 @@ Below is a list of all tutorials available in this repository:
 - 🎥 [Video](https://www.youtube.com/watch?v=A9wl491ltPA)
 ### [EuRoC MAV Dataset in Foxglove](datasets/EuRoC_MAV/README.md)
 - 📝 Drone SLAM of the MH01 Environment from EuRoC MAV
+- 🔗 [Related Blog Post](https://foxglove.dev/blog/converting-euroc-mav-dataset-to-mcap)
 ### [Convert .mat files to MCAP](datasets/NASA_mat_to_MCAP/README.md)
 - 📝 Visualize Matlab files for NASA Valkyrie box pickup task
 ### [Converting Argoverse 2 Dataset to MCAP](datasets/foxglove_av2_tutorial/README.md)

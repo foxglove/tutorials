@@ -1,6 +1,7 @@
 ---
 title: "EuRoC MAV Dataset in Foxglove"
 short_description: "Drone SLAM of the MH01 Environment from EuRoC MAV"
+blog_post_url: "https://foxglove.dev/blog/converting-euroc-mav-dataset-to-mcap"
 ---
 
 # EuRoC MAV Dataset in Foxglove
