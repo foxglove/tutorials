@@ -96,6 +96,6 @@ Below is a list of all tutorials available in this repository:
 
 ## Ros
 ### [ROS 2 Jazzy TurtleBot3 Diff-Drive Tuning with Pixi](ros/ros2_jazzy_turtlebot3_diffdrive_pixi/README.md)
-- 📝 Headless Gazebo simulation, MCAP recording, and live diff-drive tuning with Foxglove
+- 📝 Headless Gazebo simulation, MCAP recording, and live wheel radius/separation modifier tuning with Foxglove
 
 Join the Foxglove [Discord](https://discord.gg/UEuytgVkks) and follow [our blog](https://foxglove.dev/blog) for more ideas on how to integrate Foxglove into your robotics development workflows.
