@@ -89,13 +89,13 @@ Below is a list of all tutorials available in this repository:
 - 📝 Tutorial for using ROS Client Library for Rust
 - 🔗 [Related Blog Post](https://foxglove.dev/blog/first-steps-using-rust-with-ros2)
 
-## ROS Tutorials
-### [ROS 2 Jazzy TurtleBot3 Diff-Drive Tuning with Pixi](ros/ros2_jazzy_turtlebot3_diffdrive_pixi/README.md)
-- 📝 Headless Gazebo simulation, MCAP recording, and live diff-drive tuning with Foxglove
-
 ## Jupyter Notebooks
 ### [Analyze Your Robotics Data with Jupyter Notebooks](jupyter_notebooks/data_platform/README.md)
 - 📝 Load and analyze data in Jupyter Notebooks using Foxglove Data Management
 - 🔗 [Related Blog Post](https://foxglove.dev/blog/analyze-your-robotics-data-with-jupyter-notebooks)
+
+## Ros
+### [ROS 2 Jazzy TurtleBot3 Diff-Drive Tuning with Pixi](ros/ros2_jazzy_turtlebot3_diffdrive_pixi/README.md)
+- 📝 Headless Gazebo simulation, MCAP recording, and live diff-drive tuning with Foxglove
 
 Join the Foxglove [Discord](https://discord.gg/UEuytgVkks) and follow [our blog](https://foxglove.dev/blog) for more ideas on how to integrate Foxglove into your robotics development workflows.
