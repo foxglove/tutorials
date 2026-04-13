@@ -1,0 +1,15 @@
+diff_drive_tuner:
+  ros__parameters:
+    use_sim_time: true
+    input_topic: "/cmd_vel_raw"
+    output_topic: "/cmd_vel"
+    publish_rate_hz: 30.0
+    linear_scale: 1.0
+    angular_scale: 1.0
+    linear_bias: 0.0
+    angular_bias: 0.0
+    max_linear_speed: 0.22
+    max_angular_speed: 2.84
+    linear_accel_limit: 0.6
+    angular_accel_limit: 3.5
+    cmd_timeout: 0.5
