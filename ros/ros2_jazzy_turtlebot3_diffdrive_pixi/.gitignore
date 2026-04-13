@@ -1,2 +1,4 @@
 bags/
 external/
+**/__pycache__/
+*.pyc
