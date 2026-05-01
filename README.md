@@ -93,5 +93,7 @@ Below is a list of all tutorials available in this repository:
 ### [Analyze Your Robotics Data with Jupyter Notebooks](jupyter_notebooks/data_platform/README.md)
 - 📝 Load and analyze data in Jupyter Notebooks using Foxglove Data Management
 - 🔗 [Related Blog Post](https://foxglove.dev/blog/analyze-your-robotics-data-with-jupyter-notebooks)
+### [Get Started with the Foxglove Notebook Integration](jupyter_notebooks/getting_started/README.md)
+- 📝 Embed the Foxglove viewer in a Jupyter / Colab notebook and drive it with programmatic layouts
 
 Join the Foxglove [Discord](https://discord.gg/UEuytgVkks) and follow [our blog](https://foxglove.dev/blog) for more ideas on how to integrate Foxglove into your robotics development workflows.

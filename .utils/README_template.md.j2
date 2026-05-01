@@ -18,6 +18,9 @@ Below is a list of all tutorials available in this repository:
 {%- if tutorial.visualize_url %}
 - 📊 [Visualize]({{ tutorial.visualize_url }})
 {%- endif %}
+{%- if tutorial.colab_url %}
+- 📓 [Open in Colab]({{ tutorial.colab_url }})
+{%- endif %}
 {%- endfor %}
 {% endfor %}
 Join the Foxglove [Discord](https://discord.gg/UEuytgVkks) and follow [our blog](https://foxglove.dev/blog) for more ideas on how to integrate Foxglove into your robotics development workflows.
