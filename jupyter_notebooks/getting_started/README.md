@@ -1,7 +1,7 @@
 ---
 title: "Get Started with the Foxglove Notebook Integration"
 short_description: "Embed the Foxglove viewer in a Jupyter / Colab notebook and drive it with programmatic layouts"
-# colab_url: "TODO_COLAB_URL"  # Uncomment and fill in once the Colab share link is available
+colab_url: "https://colab.research.google.com/github/foxglove/tutorials/blob/main/jupyter_notebooks/getting_started/GettingStarted.ipynb"
 ---
 # Foxglove Notebook Integration — Getting Started
 
@@ -16,9 +16,9 @@ This notebook walks through:
 
 ## Run in Colab
 
-[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](TODO_COLAB_URL)
+Launch the sample notebook directly in Colab.
 
-> The Colab share URL will be filled in once the notebook is published. In the meantime you can run it locally — see below.
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/foxglove/tutorials/blob/main/jupyter_notebooks/getting_started/GettingStarted.ipynb)
 
 ## Run locally
 
