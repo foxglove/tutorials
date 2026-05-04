@@ -55,6 +55,7 @@ def scan_tutorials():
                     "blog_post_url": metadata.get("blog_post_url", ""),
                     "video_url": metadata.get("video_url", ""),
                     "visualize_url": metadata.get("visualize_url", ""),
+                    "colab_url": metadata.get("colab_url", ""),
                 })
     return sorted(tutorials, key=lambda t: t["path"])
 
