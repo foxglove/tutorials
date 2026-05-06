@@ -1,0 +1,9 @@
+diff_drive_calibrator:
+  ros__parameters:
+    use_sim_time: true
+    input_topic: "/cmd_vel"
+    output_topic: "/cmd_vel_tuned"
+    wheel_radius_multiplier: 1.0
+    wheel_separation_multiplier: 1.0
+    cmd_timeout: 0.5
+    publish_rate_hz: 30.0

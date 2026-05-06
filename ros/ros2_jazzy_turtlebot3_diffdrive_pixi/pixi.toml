@@ -1,0 +1,36 @@
+[workspace]
+name = "ros2-jazzy-turtlebot3-diffdrive-pixi"
+channels = ["https://prefix.dev/robostack-jazzy", "https://prefix.dev/conda-forge"]
+platforms = ["linux-64"]
+
+[activation.env]
+TURTLEBOT3_MODEL = "burger"
+
+[dependencies]
+python = ">=3.12,<3.13"
+git = "*"
+colcon-common-extensions = "*"
+lz4-c = "*"
+zstd = "*"
+ros-jazzy-ros-base = "*"
+ros-jazzy-rclpy = "*"
+ros-jazzy-nav-msgs = "*"
+ros-jazzy-geometry-msgs = "*"
+ros-jazzy-tf2-ros = "*"
+ros-jazzy-ros-gz-sim = "*"
+ros-jazzy-rosbag2-storage-mcap = "*"
+ros-jazzy-foxglove-bridge = "*"
+ros-jazzy-teleop-twist-keyboard = "*"
+ros-jazzy-turtlebot3-gazebo = "*"
+ros-jazzy-turtlebot3-simulations = "*"
+
+[tasks]
+sim = "bash -lc 'ros2 launch \"$PIXI_PROJECT_ROOT/launch/headless_turtlebot3_gazebo.launch.py\"'"
+calibrate-sim = "python ./scripts/diff_drive_calibrator.py --ros-args --params-file ./config/diff_drive_calibrator_sim.yaml"
+calibrate-replay = "python ./scripts/diff_drive_calibrator.py --ros-args --params-file ./config/diff_drive_calibrator_replay.yaml"
+teleop = "ros2 run teleop_twist_keyboard teleop_twist_keyboard --ros-args -r /cmd_vel:=/cmd_vel_raw"
+drive-circle = "ros2 topic pub --rate 10 /cmd_vel_raw geometry_msgs/msg/Twist '{linear: {x: 0.2}, angular: {z: 0.4}}'"
+bag-record = "bash -lc 'mkdir -p bags && ros2 bag record -s mcap -o bags/tb3_$(date +%Y%m%d_%H%M%S) /clock /cmd_vel_raw /cmd_vel /odom /tf /tf_static /joint_states /scan'"
+foxglove-bridge = "ros2 launch foxglove_bridge foxglove_bridge_launch.xml port:=8765 address:=0.0.0.0"
+player-setup = "bash ./scripts/setup_foxglove_mcap_player.sh"
+mcap-play = { cmd = "bash -lc ': \"${MCAP_FILE:?Set MCAP_FILE to a .mcap path}\"; bash ./scripts/run_mcap_player.sh \"$MCAP_FILE\" \"${PLAYER_PORT:-8766}\" \"${PLAYER_HOST:-127.0.0.1}\"'", depends-on = ["player-setup"] }
