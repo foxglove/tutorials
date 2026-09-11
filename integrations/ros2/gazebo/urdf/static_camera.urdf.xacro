@@ -1,0 +1,27 @@
+<?xml version="1.0"?>
+<robot name="static_camera" xmlns:xacro="http://ros.org/wiki/xacro">
+  <xacro:include filename="$(find fg_gazebo_example)/urdf/camera_macro.xacro" />
+
+  <!-- Root link for the standalone camera; spawn pose is set via `ros_gz_sim create -x -y -z -R -P -Y` -->
+  <link name="static_camera_base">
+    <inertial>
+      <mass value="1e-3" />
+      <origin xyz="0 0 0" />
+      <inertia ixx="1e-6" ixy="0" ixz="0" iyy="1e-6" iyz="0" izz="1e-6" />
+    </inertial>
+  </link>
+
+  <!-- far_clip=30.0 and a wider fov than the default (60 deg, tuned for the wrist
+       depth camera's close-up view of the box): this camera's job is a wide shot of
+       the whole workcell warehouse (roughly 20x20m, viewed here from a high corner
+       ~11m from the arm and further still from the opposite wall), not a close-up. -->
+  <xacro:fg_camera name="static_camera" camera_type="camera" parent="static_camera_base"
+                    far_clip="30.0" fov="1.4">
+    <origin xyz="0 0 0" rpy="0 0 0" />
+  </xacro:fg_camera>
+
+  <!-- Not part of the robot's URDF, so it doesn't need to move with anything -->
+  <gazebo>
+    <static>true</static>
+  </gazebo>
+</robot>

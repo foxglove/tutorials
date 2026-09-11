@@ -1,0 +1,259 @@
+{
+  "configById": {
+    "3D!gazebotutorial": {
+      "cameraState": {
+        "perspective": true,
+        "distance": 7,
+        "phi": 45,
+        "thetaOffset": 45,
+        "targetOffset": [0, 0, 0.3],
+        "target": [1.0, -3.5, 1.0],
+        "targetOrientation": [0, 0, 0, 1],
+        "fovy": 50,
+        "near": 0.01,
+        "far": 5000
+      },
+      "followMode": "follow-pose",
+      "followTf": "world",
+      "scene": {
+        "transforms": {
+          "showLabel": false,
+          "axisScale": 0.05
+        }
+      },
+      "transforms": {},
+      "topics": {
+        "/wrist_camera/points": {
+          "visible": true,
+          "colorMode": "colormap",
+          "colorMap": "turbo",
+          "colorField": "z",
+          "pointSize": 4
+        },
+        "/robot_description": {
+          "visible": true
+        },
+        "/foxglove_box/robot_description": {
+          "visible": true
+        },
+        "/room/robot_description": {
+          "visible": true
+        }
+      },
+      "layers": {
+        "grid": {
+          "visible": true,
+          "frameLocked": true,
+          "label": "Grid",
+          "instanceId": "gazebo-tutorial-grid",
+          "layerId": "foxglove.Grid",
+          "size": 10,
+          "divisions": 10,
+          "lineWidth": 1,
+          "color": "#248eff",
+          "position": [0, 0, 0],
+          "rotation": [0, 0, 0]
+        },
+        "gazebo-tutorial-urdf": {
+          "visible": true,
+          "frameLocked": true,
+          "label": "URDF",
+          "instanceId": "gazebo-tutorial-urdf",
+          "layerId": "foxglove.Urdf",
+          "sourceType": "topic",
+          "url": "",
+          "filePath": "",
+          "parameter": "",
+          "topic": "/robot_description",
+          "framePrefix": "",
+          "displayMode": "auto",
+          "order": 1
+        },
+        "gazebo-tutorial-box-urdf": {
+          "visible": true,
+          "frameLocked": true,
+          "label": "Foxglove box URDF",
+          "instanceId": "gazebo-tutorial-box-urdf",
+          "layerId": "foxglove.Urdf",
+          "sourceType": "topic",
+          "url": "",
+          "filePath": "",
+          "parameter": "",
+          "topic": "/foxglove_box/robot_description",
+          "framePrefix": "",
+          "displayMode": "auto",
+          "order": 2
+        },
+        "gazebo-tutorial-room-urdf": {
+          "visible": true,
+          "frameLocked": true,
+          "label": "Room URDF",
+          "instanceId": "gazebo-tutorial-room-urdf",
+          "layerId": "foxglove.Urdf",
+          "sourceType": "topic",
+          "url": "",
+          "filePath": "",
+          "parameter": "",
+          "topic": "/room/robot_description",
+          "framePrefix": "",
+          "displayMode": "auto",
+          "order": 3
+        }
+      },
+      "publish": {
+        "type": "point",
+        "poseTopic": "/move_base_simple/goal",
+        "pointTopic": "/clicked_point",
+        "poseEstimateTopic": "/initialpose",
+        "poseEstimateXDeviation": 0.5,
+        "poseEstimateYDeviation": 0.5,
+        "poseEstimateThetaDeviation": 0.26179939
+      },
+      "imageMode": {},
+      "foxglovePanelTitle": "3D"
+    },
+    "Image!wristcamera": {
+      "cameraState": {
+        "distance": 20,
+        "perspective": true,
+        "phi": 60,
+        "target": [0, 0, 0],
+        "targetOffset": [0, 0, 0],
+        "targetOrientation": [0, 0, 0, 1],
+        "thetaOffset": 45,
+        "fovy": 45,
+        "near": 0.5,
+        "far": 5000
+      },
+      "followMode": "follow-pose",
+      "scene": {},
+      "transforms": {},
+      "topics": {},
+      "layers": {},
+      "publish": {
+        "type": "point",
+        "poseTopic": "/move_base_simple/goal",
+        "pointTopic": "/clicked_point",
+        "poseEstimateTopic": "/initialpose",
+        "poseEstimateXDeviation": 0.5,
+        "poseEstimateYDeviation": 0.5,
+        "poseEstimateThetaDeviation": 0.26179939
+      },
+      "imageMode": {
+        "imageTopic": "/wrist_camera/image"
+      },
+      "foxglovePanelTitle": "Wrist camera"
+    },
+    "Image!staticcamera": {
+      "cameraState": {
+        "distance": 20,
+        "perspective": true,
+        "phi": 60,
+        "target": [0, 0, 0],
+        "targetOffset": [0, 0, 0],
+        "targetOrientation": [0, 0, 0, 1],
+        "thetaOffset": 45,
+        "fovy": 45,
+        "near": 0.5,
+        "far": 5000
+      },
+      "followMode": "follow-pose",
+      "scene": {},
+      "transforms": {},
+      "topics": {},
+      "layers": {},
+      "publish": {
+        "type": "point",
+        "poseTopic": "/move_base_simple/goal",
+        "pointTopic": "/clicked_point",
+        "poseEstimateTopic": "/initialpose",
+        "poseEstimateXDeviation": 0.5,
+        "poseEstimateYDeviation": 0.5,
+        "poseEstimateThetaDeviation": 0.26179939
+      },
+      "imageMode": {
+        "imageTopic": "/static_camera/image"
+      },
+      "foxglovePanelTitle": "Static camera"
+    },
+    "RawMessages!jointstates": {
+      "diffEnabled": false,
+      "diffMethod": "custom",
+      "diffTopicPath": "",
+      "showFullMessageForDiff": false,
+      "topicPath": "/joint_states",
+      "foxglovePanelTitle": "Joint states"
+    },
+    "Teleop!shoulder": {
+      "topic": "/foxglove_arm/teleop/shoulder",
+      "publishRate": 20,
+      "upButton": {
+        "field": "linear-x",
+        "value": 1
+      },
+      "downButton": {
+        "field": "linear-x",
+        "value": -1
+      },
+      "leftButton": {
+        "field": "linear-y",
+        "value": 1
+      },
+      "rightButton": {
+        "field": "linear-y",
+        "value": -1
+      },
+      "foxglovePanelTitle": "Shoulder (up/down = tilt, left/right = pan)"
+    },
+    "Teleop!wrist": {
+      "topic": "/foxglove_arm/teleop/wrist",
+      "publishRate": 20,
+      "upButton": {
+        "field": "linear-x",
+        "value": 1
+      },
+      "downButton": {
+        "field": "linear-x",
+        "value": -1
+      },
+      "leftButton": {
+        "field": "linear-y",
+        "value": 1
+      },
+      "rightButton": {
+        "field": "linear-y",
+        "value": -1
+      },
+      "foxglovePanelTitle": "Wrist (up/down = tilt, left/right unused)"
+    }
+  },
+  "globalVariables": {},
+  "userNodes": {},
+  "playbackConfig": {
+    "speed": 1
+  },
+  "layout": {
+    "first": "3D!gazebotutorial",
+    "second": {
+      "first": {
+        "first": {
+          "first": "Image!wristcamera",
+          "second": "Image!staticcamera",
+          "direction": "column"
+        },
+        "second": "RawMessages!jointstates",
+        "direction": "column",
+        "splitPercentage": 66.66
+      },
+      "second": {
+        "first": "Teleop!shoulder",
+        "second": "Teleop!wrist",
+        "direction": "column"
+      },
+      "direction": "row",
+      "splitPercentage": 70
+    },
+    "direction": "row",
+    "splitPercentage": 45
+  }
+}

@@ -1,0 +1,98 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://ros.org/wiki/xacro">
+  <!--
+    A small reusable "camera" body (cylinder lens + box housing) with a Gazebo
+    Sim camera/rgbd_camera sensor attached. Used both for the arm's wrist-mounted
+    depth camera and for the world-fixed static camera. Sized to be clearly visible
+    next to the arm (see robot.xacro), not a barely-there nub.
+  -->
+  <!-- Declared once here (at this document's root, merged in wherever this file is
+       xacro:included) so both visuals below, and podest in robot.xacro, can
+       reference it by name; a bare <material name="..."/> with no inline <color>
+       is undefined otherwise. -->
+  <material name="darkgrey">
+    <color rgba="0.3 0.3 0.3 1.0" />
+  </material>
+
+  <xacro:macro name="fg_camera" params="name camera_type parent far_clip:=1.2 fov:=1.047 *origin">
+    <joint name="${name}_joint" type="fixed">
+      <xacro:insert_block name="origin" />
+      <parent link="${parent}" />
+      <child link="${name}_link" />
+    </joint>
+
+    <link name="${name}_link">
+      <visual>
+        <origin xyz="0 0 0" rpy="0 ${pi/2} 0" />
+        <geometry>
+          <cylinder radius="0.035" length="0.07" />
+        </geometry>
+        <material name="darkgrey" />
+      </visual>
+      <visual>
+        <origin xyz="-0.035 0 0" rpy="0 0 0" />
+        <geometry>
+          <box size="0.05 0.13 0.09" />
+        </geometry>
+        <material name="darkgrey" />
+      </visual>
+      <collision>
+        <origin xyz="0 0 0" rpy="0 ${pi/2} 0" />
+        <geometry>
+          <cylinder radius="0.035" length="0.07" />
+        </geometry>
+      </collision>
+      <inertial>
+        <mass value="0.05" />
+        <origin xyz="0 0 0" />
+        <inertia ixx="1e-5" ixy="0" ixz="0" iyy="1e-5" iyz="0" izz="1e-5" />
+      </inertial>
+    </link>
+
+    <joint name="${name}_optical_joint" type="fixed">
+      <origin xyz="0 0 0" rpy="${-pi/2} 0 ${-pi/2}" />
+      <parent link="${name}_link" />
+      <child link="${name}_optical_frame" />
+    </joint>
+    <link name="${name}_optical_frame" />
+
+    <gazebo reference="${name}_link">
+      <material>Gazebo/DarkGrey</material>
+      <sensor name="${name}" type="${camera_type}">
+        <always_on>true</always_on>
+        <update_rate>15</update_rate>
+        <visualize>true</visualize>
+        <!-- gz-transport topic prefix this sensor publishes on, e.g. "<name>/image" -->
+        <topic>${name}</topic>
+        <gz_frame_id>${name}_optical_frame</gz_frame_id>
+        <camera>
+          <horizontal_fov>${fov}</horizontal_fov>
+          <image>
+            <width>640</width>
+            <height>480</height>
+          </image>
+          <!--
+            far_clip defaults to 1.2: far=10.0 (the original UR5e-scale tutorial's
+            value) was ~20x the wrist depth camera's actual working distance (it stays
+            within well under 1m of the box). Any camera ray that doesn't hit real
+            geometry reports a "background" return at exactly the far clip distance
+            (normal depth-camera behavior, not a bug), so a large far value turns into a
+            big, distracting wall of background points whenever the camera isn't pointed
+            square at the box. 1.2 keeps the whole scene comfortably in range while
+            keeping that background wall small and close whenever the camera does end up
+            aimed at open space (e.g. while jogging the arm around with the Teleop
+            panels). The room-overview static_camera passes a much larger far_clip
+            instead, since it's meant to see the whole room, not just the box up close;
+            without that override, anything past 1.2m renders as flat background color,
+            which is why its previous shared default made it look like it could only
+            see a small, oddly-curved patch of the scene rather than the room.
+          -->
+          <clip>
+            <near>0.05</near>
+            <far>${far_clip}</far>
+          </clip>
+        </camera>
+      </sensor>
+    </gazebo>
+  </xacro:macro>
+</robot>

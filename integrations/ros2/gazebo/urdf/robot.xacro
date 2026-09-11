@@ -1,0 +1,210 @@
+<?xml version="1.0"?>
+<robot name="foxglove_arm" xmlns:xacro="http://ros.org/wiki/xacro">
+  <xacro:include filename="$(find fg_gazebo_example)/urdf/camera_macro.xacro" />
+
+  <xacro:property name="podest_height" value="0.1" />
+
+  <!-- Where the arm sits in the workcell warehouse (see worlds/foxglove_demo.sdf):
+       south of the conveyor/roof-support poles, near the control panel, on open
+       floor. Baked in here rather than passed via the spawner's "-x/-y/-z": this
+       URDF's root link is literally named "world", which Gazebo treats as the
+       reserved world frame and pins to the real world origin regardless of the
+       requested spawn pose, so spawn-time "-x/-y/-z" offsets are silently ignored for
+       this model. foxglove_box's and static_camera's spawn poses (in
+       simulation.launch.py) are set relative to this same position, since neither of
+       those URDFs has this "world"-named-root-link quirk and their spawn args are
+       honored normally. -->
+  <xacro:property name="arm_x" value="1.0" />
+  <xacro:property name="arm_y" value="-3.5" />
+  <!-- arm_z = table_height: the arm sits on top of the table at this position (see
+       "arm_table" in worlds/foxglove_demo.sdf) instead of directly on the floor. Keep
+       in sync with table_height in simulation.launch.py. -->
+  <xacro:property name="arm_z" value="0.5" />
+
+  <!-- Declared once, referenced by name everywhere below; a bare <material name="..."/>
+       reference with no inline <color> is undefined unless the name resolves to a
+       material declared at this (robot root) scope. -->
+  <material name="fg_blue">
+    <color rgba="0.06 0.4 0.85 1.0" />
+  </material>
+
+  <link name="world" />
+
+  <joint name="world_joint" type="fixed">
+    <parent link="world" />
+    <child link="podest" />
+    <origin xyz="${arm_x} ${arm_y} ${arm_z}" rpy="0 0 0" />
+  </joint>
+
+  <!-- Small podest so the arm isn't floating at the origin -->
+  <link name="podest">
+    <visual>
+      <origin xyz="0 0 ${-podest_height / 2}" rpy="0 0 0" />
+      <geometry>
+        <cylinder radius="0.1" length="${podest_height}" />
+      </geometry>
+      <material name="darkgrey" />
+    </visual>
+    <collision>
+      <origin xyz="0 0 ${-podest_height / 2}" rpy="0 0 0" />
+      <geometry>
+        <cylinder radius="0.1" length="${podest_height}" />
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="2.0" />
+      <origin xyz="0 0 0" />
+      <inertia ixx="0.01" ixy="0" ixz="0" iyy="0.01" iyz="0" izz="0.01" />
+    </inertial>
+  </link>
+  <gazebo reference="podest">
+    <material>Gazebo/DarkGrey</material>
+  </gazebo>
+
+  <!-- Shoulder pan (yaw) -->
+  <joint name="shoulder_pan_joint" type="revolute">
+    <parent link="podest" />
+    <child link="shoulder_link" />
+    <origin xyz="0 0 0" rpy="0 0 0" />
+    <axis xyz="0 0 1" />
+    <limit lower="-3.14" upper="3.14" effort="20" velocity="1.0" />
+  </joint>
+
+  <link name="shoulder_link">
+    <visual>
+      <origin xyz="0 0 0.05" rpy="0 0 0" />
+      <geometry>
+        <cylinder radius="0.05" length="0.1" />
+      </geometry>
+      <material name="fg_blue" />
+    </visual>
+    <collision>
+      <origin xyz="0 0 0.05" rpy="0 0 0" />
+      <geometry>
+        <cylinder radius="0.05" length="0.1" />
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="0.5" />
+      <origin xyz="0 0 0.05" />
+      <inertia ixx="0.001" ixy="0" ixz="0" iyy="0.001" iyz="0" izz="0.001" />
+    </inertial>
+  </link>
+
+  <!--
+    Shoulder tilt (pitch). The origin's pitch (0.6 rad) is baked in so the arm has a
+    visibly bent, "reaching" rest pose at joint angle 0; without it, every link
+    stacks straight up and the arm just looks like a pole. The joint still rotates
+    about the same Y axis, so this only shifts what angle 0 means, not the DOF itself.
+  -->
+  <joint name="shoulder_tilt_joint" type="revolute">
+    <parent link="shoulder_link" />
+    <child link="upper_arm_link" />
+    <origin xyz="0 0 0.1" rpy="0 0.6 0" />
+    <axis xyz="0 1 0" />
+    <limit lower="-1.57" upper="1.57" effort="20" velocity="1.0" />
+  </joint>
+
+  <link name="upper_arm_link">
+    <visual>
+      <origin xyz="0 0 0.15" rpy="0 0 0" />
+      <geometry>
+        <box size="0.06 0.06 0.3" />
+      </geometry>
+      <material name="fg_blue" />
+    </visual>
+    <collision>
+      <origin xyz="0 0 0.15" rpy="0 0 0" />
+      <geometry>
+        <box size="0.06 0.06 0.3" />
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="0.4" />
+      <origin xyz="0 0 0.15" />
+      <inertia ixx="0.002" ixy="0" ixz="0" iyy="0.002" iyz="0" izz="0.0005" />
+    </inertial>
+  </link>
+
+  <!-- Wrist tilt (pitch); baked -0.3 rad angles the wrist camera slightly back down toward the scene -->
+  <joint name="wrist_tilt_joint" type="revolute">
+    <parent link="upper_arm_link" />
+    <child link="wrist_link" />
+    <origin xyz="0 0 0.3" rpy="0 -0.3 0" />
+    <axis xyz="0 1 0" />
+    <limit lower="-1.9" upper="1.9" effort="10" velocity="1.0" />
+  </joint>
+
+  <link name="wrist_link">
+    <visual>
+      <geometry>
+        <sphere radius="0.04" />
+      </geometry>
+      <material name="fg_blue" />
+    </visual>
+    <collision>
+      <geometry>
+        <sphere radius="0.04" />
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="0.2" />
+      <origin xyz="0 0 0" />
+      <inertia ixx="0.0002" ixy="0" ixz="0" iyy="0.0002" iyz="0" izz="0.0002" />
+    </inertial>
+  </link>
+
+  <!--
+    Wrist-mounted RGB-D camera, replaces the ROS1 tutorial's robot-mounted Kinect.
+    Offset well past the wrist_link sphere's 0.04 radius so it reads as a distinct
+    part sticking out of the wrist, not a lump merged into the joint.
+
+    far_clip=8.0: at the rest pose the box fills much of the frame from only ~0.26m
+    away, and everything past the clip distance in the rest of the frame is flat
+    background void. With a too-short clip (1.2, then 3.0) that read as a hard cutoff:
+    "a little circle" close-up, then a shelf fading to grey mid-shelf, rather than a
+    normal view. This arm lives in a ~20x20m warehouse (see worlds/foxglove_demo.sdf),
+    where even "nearby" shelving/racks can be several meters off depending on which
+    way the wrist is pointed, so 8.0 is needed to keep them from being clipped; a much
+    larger value would start adding a distracting far wall of background points to the
+    point cloud whenever the camera faces open floor.
+  -->
+  <xacro:fg_camera name="wrist_camera" camera_type="rgbd_camera" parent="wrist_link" far_clip="8.0">
+    <origin xyz="0.09 0 0" rpy="0 0 0" />
+  </xacro:fg_camera>
+
+  <!--
+    Gazebo Sim (Harmonic) has no built-in ROS1-style "gazebo_ros_control".
+    Each revolute joint gets its own JointPositionController system plugin so it can
+    be commanded directly over a gz-transport topic, without pulling in ros2_control.
+    See: https://gazebosim.org/api/sim/9/jointcontrollers.html
+  -->
+  <xacro:macro name="fg_joint_position_controller" params="joint_name">
+    <gazebo>
+      <plugin filename="gz-sim-joint-position-controller-system"
+              name="gz::sim::systems::JointPositionController">
+        <joint_name>${joint_name}</joint_name>
+        <topic>${joint_name}/cmd_pos</topic>
+        <p_gain>15</p_gain>
+        <i_gain>0.1</i_gain>
+        <d_gain>1.0</d_gain>
+        <i_max>1</i_max>
+        <i_min>-1</i_min>
+        <cmd_max>10</cmd_max>
+        <cmd_min>-10</cmd_min>
+        <initial_position>0</initial_position>
+      </plugin>
+    </gazebo>
+  </xacro:macro>
+
+  <xacro:fg_joint_position_controller joint_name="shoulder_pan_joint" />
+  <xacro:fg_joint_position_controller joint_name="shoulder_tilt_joint" />
+  <xacro:fg_joint_position_controller joint_name="wrist_tilt_joint" />
+
+  <!-- Publishes joint_state so robot_state_publisher can compute moving-joint TF -->
+  <gazebo>
+    <plugin filename="gz-sim-joint-state-publisher-system"
+            name="gz::sim::systems::JointStatePublisher">
+    </plugin>
+  </gazebo>
+</robot>

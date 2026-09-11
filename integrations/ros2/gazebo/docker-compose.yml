@@ -1,0 +1,15 @@
+services:
+  gazebo:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    ports:
+      # foxglove_bridge websocket -- Docker Desktop forwards this to localhost
+      # on the Mac host automatically, no host.docker.internal needed.
+      - "8765:8765"
+    environment:
+      - LIBGL_ALWAYS_SOFTWARE=1
+      # Set this in your shell (or a .env file next to this docker-compose.yml) to turn on
+      # Foxglove Remote Access -- see the "Remote access" section of the README. Left unset,
+      # this is a no-op and the bridge behaves exactly as before.
+      - FOXGLOVE_DEVICE_TOKEN

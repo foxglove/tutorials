@@ -1,0 +1,84 @@
+# Bridges topics between Gazebo Sim (gz-transport) and ROS 2, consumed by
+# ros_gz_bridge's `parameter_bridge` node.
+# Schema reference: https://github.com/gazebosim/ros_gz/blob/jazzy/ros_gz_bridge/README.md
+#
+# All gz_topic_name values below were confirmed against a running container with
+# `gz topic -l` / `gz topic -i -t <name>`. Notably, JointPositionController's
+# <topic> tag (urdf/robot.xacro) is used LITERALLY, with no /model/<name>/ auto-scoping
+# applied -- so the cmd_pos topics are bare (e.g. /shoulder_pan_joint/cmd_pos), not
+# under /model/foxglove_arm/. JointStatePublisher (no <topic> override) does get the
+# default scoped name, /world/foxglove_demo/model/foxglove_arm/joint_state.
+
+- ros_topic_name: "/clock"
+  gz_topic_name: "/clock"
+  ros_type_name: "rosgraph_msgs/msg/Clock"
+  gz_type_name: "gz.msgs.Clock"
+  direction: GZ_TO_ROS
+
+- ros_topic_name: "/joint_states"
+  gz_topic_name: "/world/foxglove_demo/model/foxglove_arm/joint_state"
+  ros_type_name: "sensor_msgs/msg/JointState"
+  gz_type_name: "gz.msgs.Model"
+  direction: GZ_TO_ROS
+
+- ros_topic_name: "/foxglove_arm/shoulder_pan_joint/cmd_pos"
+  gz_topic_name: "/shoulder_pan_joint/cmd_pos"
+  ros_type_name: "std_msgs/msg/Float64"
+  gz_type_name: "gz.msgs.Double"
+  direction: ROS_TO_GZ
+
+- ros_topic_name: "/foxglove_arm/shoulder_tilt_joint/cmd_pos"
+  gz_topic_name: "/shoulder_tilt_joint/cmd_pos"
+  ros_type_name: "std_msgs/msg/Float64"
+  gz_type_name: "gz.msgs.Double"
+  direction: ROS_TO_GZ
+
+- ros_topic_name: "/foxglove_arm/wrist_tilt_joint/cmd_pos"
+  gz_topic_name: "/wrist_tilt_joint/cmd_pos"
+  ros_type_name: "std_msgs/msg/Float64"
+  gz_type_name: "gz.msgs.Double"
+  direction: ROS_TO_GZ
+
+# Wrist-mounted RGB-D camera (replaces the ROS1 tutorial's Kinect)
+- ros_topic_name: "/wrist_camera/image"
+  gz_topic_name: "/wrist_camera/image"
+  ros_type_name: "sensor_msgs/msg/Image"
+  gz_type_name: "gz.msgs.Image"
+  direction: GZ_TO_ROS
+
+- ros_topic_name: "/wrist_camera/depth_image"
+  gz_topic_name: "/wrist_camera/depth_image"
+  ros_type_name: "sensor_msgs/msg/Image"
+  gz_type_name: "gz.msgs.Image"
+  direction: GZ_TO_ROS
+
+- ros_topic_name: "/wrist_camera/points"
+  gz_topic_name: "/wrist_camera/points"
+  ros_type_name: "sensor_msgs/msg/PointCloud2"
+  gz_type_name: "gz.msgs.PointCloudPacked"
+  direction: GZ_TO_ROS
+
+- ros_topic_name: "/wrist_camera/camera_info"
+  gz_topic_name: "/wrist_camera/camera_info"
+  ros_type_name: "sensor_msgs/msg/CameraInfo"
+  gz_type_name: "gz.msgs.CameraInfo"
+  direction: GZ_TO_ROS
+
+# World-fixed static RGB camera.
+# Unlike rgbd_camera (used for wrist_camera above), a plain `type="camera"` sensor in
+# gz-sim does NOT scope its sub-topics under its <topic> tag the same way: the image
+# publishes on the bare <topic> value itself (no "/image" suffix), and camera_info
+# publishes on a bare, unscoped /camera_info -- not <topic>/camera_info. Confirmed live
+# via `gz topic -i -t <name>`. This only works cleanly because there's a single plain
+# `camera` sensor in this world; a second one would collide on /camera_info.
+- ros_topic_name: "/static_camera/image"
+  gz_topic_name: "/static_camera"
+  ros_type_name: "sensor_msgs/msg/Image"
+  gz_type_name: "gz.msgs.Image"
+  direction: GZ_TO_ROS
+
+- ros_topic_name: "/static_camera/camera_info"
+  gz_topic_name: "/camera_info"
+  ros_type_name: "sensor_msgs/msg/CameraInfo"
+  gz_type_name: "gz.msgs.CameraInfo"
+  direction: GZ_TO_ROS

@@ -1,0 +1,30 @@
+<?xml version="1.0"?>
+<!--
+  Scale/mass/inertia here are ~0.4x the ROS1 tutorial's original values: that version
+  was sized for a full-size UR5e workspace, and this tutorial's arm (see robot.xacro)
+  is a much smaller desktop-scale arm, so the box needed to shrink to match; otherwise
+  it renders as a huge slab relative to the arm.
+-->
+<robot name="foxglove_block" xmlns:xacro="http://ros.org/wiki/xacro">
+  <link name="root_link">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="package://fg_gazebo_example/meshes/foxglove_box.dae" scale="0.02 0.02 0.02"/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="0.0 0.0 0.0" rpy="1.57 0 1.57"/>
+      <geometry>
+        <box size="0.16 0.04 0.04"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="0.036" />
+      <origin xyz="0 0 0" />
+      <inertia ixx="0.0000096" ixy="0.0" ixz="0.0"
+               iyy="0.0000816" iyz="0.0"
+               izz="0.0000816" />
+    </inertial>
+  </link>
+</robot>
