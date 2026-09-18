@@ -14,7 +14,10 @@
        simulation.launch.py) are set relative to this same position, since neither of
        those URDFs has this "world"-named-root-link quirk and their spawn args are
        honored normally. -->
-  <xacro:property name="arm_x" value="1.0" />
+  <!-- arm_x: table is 1.0m long in X (see arm_table_top in foxglove_demo.sdf);
+       sit 0.25 table-lengths back from center so the wrist camera has a clearer
+       look at the Foxglove box toward +X. -->
+  <xacro:property name="arm_x" value="0.75" />
   <xacro:property name="arm_y" value="-3.5" />
   <!-- arm_z = table_height: the arm sits on top of the table at this position (see
        "arm_table" in worlds/foxglove_demo.sdf) instead of directly on the floor. Keep
@@ -33,7 +36,7 @@
   <joint name="world_joint" type="fixed">
     <parent link="world" />
     <child link="podest" />
-    <origin xyz="${arm_x} ${arm_y} ${arm_z}" rpy="0 0 0" />
+    <origin xyz="${arm_x} ${arm_y} ${arm_z + podest_height/2}" rpy="0 0 0" />
   </joint>
 
   <!-- Small podest so the arm isn't floating at the origin -->

@@ -158,11 +158,9 @@ def generate_launch_description():
     # robot_state_publisher publishes -- those still use the raw link name from
     # foxglove_box.urdf.
     #
-    # Position is the arm's (arm_x, arm_y, arm_z) in robot.xacro plus the original
-    # (0.35, 0.05, 0.08) offset that's roughly where the arm's baked-in rest-pose bend
-    # leans toward -- shifted by the same amount as the arm so it keeps the same
-    # position *relative to the arm* now that the arm lives in the workcell warehouse
-    # instead of at the world origin.
+    # Box stays near the +X side of the table while the arm sits further back
+    # (arm_x=0.75 in robot.xacro). z = half the 0.04m cube so it sits flat on the
+    # table top; yaw is the previous -1.56 plus +90 deg about Z.
     box_tf = Node(
         package="tf2_ros",
         executable="static_transform_publisher",
@@ -170,8 +168,8 @@ def generate_launch_description():
         arguments=[
             "--x", "1.35",
             "--y", "-3.45",
-            "--z", str(0.08 + table_height),
-            "--yaw", "-1.56",
+            "--z", str(0.02 + table_height),
+            "--yaw", "0.0108",
             "--frame-id", "world",
             "--child-frame-id", "root_link",
         ],
@@ -253,16 +251,14 @@ def generate_launch_description():
         output="screen",
     )
 
-    # Positioned relative to the arm's new (arm_x, arm_y) in robot.xacro -- see the
-    # comment on box_tf above -- and sized to match this smaller arm; see the comment
-    # in foxglove_box.urdf.
+    # Keep x/y/z/yaw in sync with box_tf above.
     spawn_foxglove_box = Node(
         package="ros_gz_sim",
         executable="create",
         arguments=[
             "-file", foxglove_box_urdf,
             "-name", "foxglove_box",
-            "-x", "1.35", "-y", "-3.45", "-z", str(0.08 + table_height), "-Y", "-1.56",
+            "-x", "1.35", "-y", "-3.45", "-z", str(0.02 + table_height), "-Y", "0.0108",
         ],
         output="screen",
     )

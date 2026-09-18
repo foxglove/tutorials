@@ -57,6 +57,9 @@
   ros_type_name: "sensor_msgs/msg/PointCloud2"
   gz_type_name: "gz.msgs.PointCloudPacked"
   direction: GZ_TO_ROS
+  # Gazebo RGB-D XYZ is body-frame (+X forward), not ROS optical (+Z forward).
+  # Images/camera_info stay on wrist_camera_optical_frame.
+  frame_id: "wrist_camera_link"
 
 - ros_topic_name: "/wrist_camera/camera_info"
   gz_topic_name: "/wrist_camera/camera_info"

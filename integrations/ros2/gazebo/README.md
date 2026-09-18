@@ -167,5 +167,8 @@ you can use either one interchangeably.
   `JointStatePublisher` plugins in `urdf/robot.xacro`. Run `gz topic -l` inside the container while the sim is
   running (`docker compose exec gazebo gz topic -l`) and update `bridge/gazebo_bridge.yaml` if the names differ
   from what's there.
+- **`/wrist_camera/points` looks rotated relative to the wrist images:** the point cloud is stamped with
+  `wrist_camera_link` (Gazebo's body frame, +X forward). `/wrist_camera/image`, `/wrist_camera/depth_image`, and
+  `/wrist_camera/camera_info` stay on `wrist_camera_optical_frame`.
 - **Slow first `docker compose up`:** the image installs Gazebo Harmonic and builds the workspace on first build;
   subsequent builds/starts are much faster.

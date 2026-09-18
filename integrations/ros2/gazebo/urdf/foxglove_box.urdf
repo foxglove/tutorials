@@ -4,6 +4,9 @@
   was sized for a full-size UR5e workspace, and this tutorial's arm (see robot.xacro)
   is a much smaller desktop-scale arm, so the box needed to shrink to match; otherwise
   it renders as a huge slab relative to the arm.
+
+  Visual is meshes/foxglove_box.dae (white body, Foxglove lockup on all four long faces)
+  with URDF scale 0.02 on a Y-stretched unit cube => ~0.04 x 0.17 x 0.04 m.
 -->
 <robot name="foxglove_block" xmlns:xacro="http://ros.org/wiki/xacro">
   <link name="root_link">
@@ -13,18 +16,19 @@
         <mesh filename="package://fg_gazebo_example/meshes/foxglove_box.dae" scale="0.02 0.02 0.02"/>
       </geometry>
     </visual>
+    <!-- Match the scaled mesh (~0.04 x 0.17 x 0.04); sits flat with spawn z = half height. -->
     <collision>
-      <origin xyz="0.0 0.0 0.0" rpy="1.57 0 1.57"/>
+      <origin xyz="0.0 0.0 0.0" rpy="0 0 0"/>
       <geometry>
-        <box size="0.16 0.04 0.04"/>
+        <box size="0.04 0.1705 0.04"/>
       </geometry>
     </collision>
     <inertial>
       <mass value="0.036" />
       <origin xyz="0 0 0" />
-      <inertia ixx="0.0000096" ixy="0.0" ixz="0.0"
-               iyy="0.0000816" iyz="0.0"
-               izz="0.0000816" />
+      <inertia ixx="0.0000919" ixy="0.0" ixz="0.0"
+               iyy="0.0000096" iyz="0.0"
+               izz="0.0000919" />
     </inertial>
   </link>
 </robot>
