@@ -1,0 +1,44 @@
+<?xml version="1.0"?>
+<!--
+  Static-only ROS-side mirror of the "workcell" warehouse building and the arm's table
+  (both spawned directly in worlds/foxglove_demo.sdf; see the comment there for the
+  workcell's provenance/license). Gazebo world geometry isn't published on any ROS
+  topic, so without this robot_description plus a "world" to "room_origin" static TF
+  (see simulation.launch.py), Foxglove's 3D panel would never show them, only the
+  camera image panels would, since those render Gazebo's actual scene directly.
+-->
+<robot name="foxglove_room">
+  <link name="room_origin">
+    <visual name="workcell">
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="package://fg_gazebo_example/models/workcell/meshes/mesh.dae"/>
+      </geometry>
+    </visual>
+    <visual name="arm_table_top">
+      <origin xyz="1.0 -3.5 0.475" rpy="0 0 0"/>
+      <geometry><box size="1.0 0.8 0.05"/></geometry>
+      <material name="arm_table_top"><color rgba="0.78 0.72 0.62 1"/></material>
+    </visual>
+    <visual name="arm_table_leg_1">
+      <origin xyz="1.42 -3.18 0.225" rpy="0 0 0"/>
+      <geometry><cylinder radius="0.03" length="0.45"/></geometry>
+      <material name="arm_table_leg"><color rgba="0.35 0.35 0.38 1"/></material>
+    </visual>
+    <visual name="arm_table_leg_2">
+      <origin xyz="1.42 -3.82 0.225" rpy="0 0 0"/>
+      <geometry><cylinder radius="0.03" length="0.45"/></geometry>
+      <material name="arm_table_leg"><color rgba="0.35 0.35 0.38 1"/></material>
+    </visual>
+    <visual name="arm_table_leg_3">
+      <origin xyz="0.58 -3.18 0.225" rpy="0 0 0"/>
+      <geometry><cylinder radius="0.03" length="0.45"/></geometry>
+      <material name="arm_table_leg"><color rgba="0.35 0.35 0.38 1"/></material>
+    </visual>
+    <visual name="arm_table_leg_4">
+      <origin xyz="0.58 -3.82 0.225" rpy="0 0 0"/>
+      <geometry><cylinder radius="0.03" length="0.45"/></geometry>
+      <material name="arm_table_leg"><color rgba="0.35 0.35 0.38 1"/></material>
+    </visual>
+  </link>
+</robot>
