@@ -1,0 +1,151 @@
+{
+  "configById": {
+    "Image!axial": {
+      "foxglovePanelTitle": "Axial",
+      "imageMode": {
+        "imageTopic": "/dicom/axial",
+        "minValue": 0,
+        "maxValue": 255
+      },
+      "followMode": "follow-none",
+      "synchronize": false
+    },
+    "Image!coronal": {
+      "foxglovePanelTitle": "Coronal",
+      "imageMode": {
+        "imageTopic": "/dicom/coronal",
+        "minValue": 0,
+        "maxValue": 255,
+        "annotations": {
+          "/dicom/coronal/annotations": {
+            "visible": true
+          }
+        }
+      },
+      "followMode": "follow-none",
+      "synchronize": false
+    },
+    "Image!sagittal": {
+      "foxglovePanelTitle": "Sagittal",
+      "imageMode": {
+        "imageTopic": "/dicom/sagittal",
+        "minValue": 0,
+        "maxValue": 255,
+        "annotations": {
+          "/dicom/sagittal/annotations": {
+            "visible": true
+          }
+        }
+      },
+      "followMode": "follow-none",
+      "synchronize": false
+    },
+    "3D!volume": {
+      "foxglovePanelTitle": "Volume",
+      "followTf": "patient",
+      "followMode": "follow-pose",
+      "fixedFrame": "world",
+      "scene": {
+        "backgroundColor": "#111111"
+      },
+      "cameraState": {
+        "perspective": true,
+        "distance": 1.6,
+        "phi": 60,
+        "thetaOffset": 35,
+        "fovy": 50,
+        "near": 0.01,
+        "far": 20,
+        "target": [0, 0, 0],
+        "targetOffset": [0, 0, 0]
+      },
+      "topics": {
+        "/dicom/bone": {
+          "visible": true,
+          "colorMode": "rgba-fields",
+          "pointSize": 2
+        },
+        "/dicom/lungs": {
+          "visible": true,
+          "colorMode": "rgba-fields",
+          "pointSize": 2
+        },
+        "/dicom/slice": {
+          "visible": true,
+          "colorMode": "rgba-fields",
+          "pointSize": 2
+        },
+        "/dicom/scene": {
+          "visible": true
+        }
+      }
+    },
+    "Plot!stats": {
+      "foxglovePanelTitle": "Stats",
+      "paths": [
+        {
+          "value": "/dicom/stats.mean_hu",
+          "enabled": true,
+          "timestampMethod": "receiveTime",
+          "color": "#f7df71"
+        },
+        {
+          "value": "/dicom/stats.lung_area_cm2",
+          "enabled": true,
+          "timestampMethod": "receiveTime",
+          "color": "#4e98e2"
+        },
+        {
+          "value": "/dicom/stats.lung_volume_ml",
+          "enabled": true,
+          "timestampMethod": "receiveTime",
+          "color": "#5cd6a9"
+        }
+      ],
+      "showXAxisLabels": true,
+      "showYAxisLabels": true,
+      "showLegend": true,
+      "legendDisplay": "floating",
+      "showPlotValuesInLegend": false,
+      "isSynced": true,
+      "xAxisVal": "timestamp",
+      "sidebarDimension": 240
+    },
+    "RawMessages!meta": {
+      "foxglovePanelTitle": "Metadata",
+      "topicPath": "/dicom/metadata",
+      "diffEnabled": false,
+      "showFullMessageForDiff": false
+    }
+  },
+  "globalVariables": {},
+  "userNodes": {},
+  "playbackConfig": {
+    "speed": 1
+  },
+  "layout": {
+    "first": {
+      "first": "Image!axial",
+      "second": {
+        "first": "Image!coronal",
+        "second": "Image!sagittal",
+        "direction": "row"
+      },
+      "direction": "column",
+      "splitPercentage": 55
+    },
+    "second": {
+      "first": "3D!volume",
+      "second": {
+        "first": "Plot!stats",
+        "second": "RawMessages!meta",
+        "direction": "column",
+        "splitPercentage": 62
+      },
+      "direction": "column",
+      "splitPercentage": 68
+    },
+    "direction": "row",
+    "splitPercentage": 48
+  }
+}
