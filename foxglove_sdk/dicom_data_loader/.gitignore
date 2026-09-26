@@ -1,0 +1,8 @@
+dist
+node_modules
+rust/Cargo.lock
+rust/target
+data/*
+!data/README.md
+*.foxe
+scripts/.smoke

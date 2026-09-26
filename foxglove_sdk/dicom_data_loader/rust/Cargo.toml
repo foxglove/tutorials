@@ -1,0 +1,23 @@
+[package]
+name = "foxglove-dicom-data-loader"
+version = "0.1.0"
+edition = "2024"
+description = "Foxglove data loader that plays DICOM CT series on the timeline"
+license = "MIT"
+publish = false
+
+[lib]
+name = "foxglove_dicom_data_loader"
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+anyhow = "1.0"
+dicom-core = "0.8"
+dicom-dictionary-std = "0.8"
+dicom-object = { version = "0.8", default-features = false }
+foxglove_data_loader = "0.1.0"
+
+[dependencies.foxglove]
+version = "0.9.0"
+default-features = false
+features = ["derive"]
