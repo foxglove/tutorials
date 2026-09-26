@@ -1,0 +1,4 @@
+{
+  "name": "Foxglove Tutorials",
+  "install": "bash .cursor/install.sh"
+}
