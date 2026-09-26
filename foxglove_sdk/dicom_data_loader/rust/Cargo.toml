@@ -21,3 +21,6 @@ foxglove_data_loader = "0.1.0"
 version = "0.9.0"
 default-features = false
 features = ["derive"]
+
+[dev-dependencies]
+prost = "0.13"

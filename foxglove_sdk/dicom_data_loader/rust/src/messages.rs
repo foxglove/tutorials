@@ -1,5 +1,3 @@
-//! Foxglove protobuf messages for the DICOM topics.
-
 use foxglove::Encode;
 use foxglove::bytes::Bytes;
 use foxglove::schemas::{
@@ -7,11 +5,8 @@ use foxglove::schemas::{
     Point2, Point3, PointCloud, PointsAnnotation, Pose, Quaternion, RawImage, SceneEntity,
     SceneUpdate, TextPrimitive, Vector3,
 };
-use foxglove_data_loader::Message;
 
 use crate::render::{Bounds, Cloud, GrayImage, POINT_STRIDE};
-
-pub const POINT_CLOUD_STRIDE: u32 = POINT_STRIDE as u32;
 
 #[derive(Encode)]
 pub struct SliceStatsMsg {
@@ -43,13 +38,8 @@ pub struct MetadataMsg {
     pub mode: String,
 }
 
-pub fn raw_image(
-    channel: u16,
-    time: u64,
-    frame_id: &str,
-    image: &GrayImage,
-) -> anyhow::Result<Message> {
-    let msg = RawImage {
+pub fn raw_image(time: u64, frame_id: &str, image: &GrayImage) -> Vec<u8> {
+    pack(&RawImage {
         timestamp: timestamp(time),
         frame_id: frame_id.to_string(),
         width: image.width,
@@ -57,13 +47,11 @@ pub fn raw_image(
         encoding: "mono8".to_string(),
         step: image.width,
         data: Bytes::copy_from_slice(&image.pixels),
-    };
-    pack(channel, time, &msg)
+    })
 }
 
-pub fn slice_line(channel: u16, time: u64, width: u32, y: f64) -> anyhow::Result<Message> {
-    let msg = ImageAnnotations {
-        circles: Vec::new(),
+pub fn slice_line(time: u64, width: u32, y: f64) -> Vec<u8> {
+    pack(&ImageAnnotations {
         points: vec![PointsAnnotation {
             timestamp: timestamp(time),
             r#type: foxglove::schemas::points_annotation::Type::LineStrip as i32,
@@ -74,148 +62,112 @@ pub fn slice_line(channel: u16, time: u64, width: u32, y: f64) -> anyhow::Result
                     y,
                 },
             ],
-            outline_color: Some(Color {
-                r: 1.0,
-                g: 0.82,
-                b: 0.15,
-                a: 1.0,
-            }),
-            outline_colors: Vec::new(),
-            fill_color: None,
+            outline_color: Some(color(1.0, 0.82, 0.15, 1.0)),
             thickness: 2.0,
+            ..Default::default()
         }],
-        texts: Vec::new(),
-    };
-    pack(channel, time, &msg)
+        ..Default::default()
+    })
 }
 
-pub fn cloud(channel: u16, time: u64, cloud: &Cloud) -> anyhow::Result<Message> {
-    let msg = PointCloud {
+pub fn cloud(time: u64, cloud: &Cloud) -> Vec<u8> {
+    use foxglove::schemas::packed_element_field::NumericType;
+    pack(&PointCloud {
         timestamp: timestamp(time),
         frame_id: "patient".to_string(),
         pose: Some(identity_pose()),
-        point_stride: POINT_CLOUD_STRIDE,
-        fields: point_fields(),
+        point_stride: POINT_STRIDE as u32,
+        fields: vec![
+            field("x", 0, NumericType::Float32),
+            field("y", 4, NumericType::Float32),
+            field("z", 8, NumericType::Float32),
+            field("red", 12, NumericType::Uint8),
+            field("green", 13, NumericType::Uint8),
+            field("blue", 14, NumericType::Uint8),
+            field("alpha", 15, NumericType::Uint8),
+        ],
         data: Bytes::copy_from_slice(&cloud.data),
-    };
-    pack(channel, time, &msg)
+    })
 }
 
-pub fn scene(channel: u16, time: u64, bounds: Bounds, label: &str) -> anyhow::Result<Message> {
-    let msg = SceneUpdate {
-        deletions: Vec::new(),
+pub fn scene(time: u64, bounds: Bounds, label: &str) -> Vec<u8> {
+    let [x0, y0, _] = bounds.min;
+    let [x1, y1, z1] = bounds.max;
+    pack(&SceneUpdate {
         entities: vec![SceneEntity {
             timestamp: timestamp(time),
             frame_id: "patient".to_string(),
             id: "dicom-volume".to_string(),
             lifetime: Some(foxglove::schemas::Duration::default()),
             frame_locked: true,
-            metadata: Vec::new(),
-            arrows: Vec::new(),
-            cubes: Vec::new(),
-            spheres: Vec::new(),
-            cylinders: Vec::new(),
             lines: vec![LinePrimitive {
                 r#type: foxglove::schemas::line_primitive::Type::LineList as i32,
                 pose: Some(identity_pose()),
                 thickness: 1.5,
                 scale_invariant: true,
                 points: box_edges(bounds),
-                color: Some(Color {
-                    r: 0.95,
-                    g: 0.85,
-                    b: 0.45,
-                    a: 0.95,
-                }),
-                colors: Vec::new(),
-                indices: Vec::new(),
+                color: Some(color(0.95, 0.85, 0.45, 0.95)),
+                ..Default::default()
             }],
-            triangles: Vec::new(),
             texts: vec![TextPrimitive {
                 pose: Some(pose_at(
-                    f64::from(bounds.min[0] + bounds.max[0]) * 0.5,
-                    f64::from(bounds.min[1] + bounds.max[1]) * 0.5,
-                    f64::from(bounds.max[2]) + 0.03,
+                    f64::from(x0 + x1) * 0.5,
+                    f64::from(y0 + y1) * 0.5,
+                    f64::from(z1) + 0.03,
                 )),
                 billboard: true,
                 font_size: 18.0,
                 scale_invariant: true,
-                color: Some(Color {
-                    r: 1.0,
-                    g: 1.0,
-                    b: 1.0,
-                    a: 1.0,
-                }),
+                color: Some(color(1.0, 1.0, 1.0, 1.0)),
                 text: label.to_string(),
             }],
-            models: Vec::new(),
+            ..Default::default()
         }],
-    };
-    pack(channel, time, &msg)
+        ..Default::default()
+    })
 }
 
-pub fn transforms(channel: u16, time: u64) -> anyhow::Result<Message> {
-    let msg = FrameTransforms {
+pub fn transforms(time: u64) -> Vec<u8> {
+    pack(&FrameTransforms {
         transforms: vec![FrameTransform {
             timestamp: timestamp(time),
             parent_frame_id: "world".to_string(),
             child_frame_id: "patient".to_string(),
-            translation: Some(Vector3 {
+            translation: Some(Vector3::default()),
+            rotation: Some(Quaternion {
                 x: 0.0,
                 y: 0.0,
                 z: 0.0,
+                w: 1.0,
             }),
-            rotation: Some(identity_quat()),
         }],
-    };
-    pack(channel, time, &msg)
+    })
 }
 
-pub fn slice_stats(channel: u16, time: u64, stats: &SliceStatsMsg) -> anyhow::Result<Message> {
-    pack(channel, time, stats)
+pub fn slice_stats(stats: &SliceStatsMsg) -> Vec<u8> {
+    pack(stats)
 }
 
-pub fn phase_stats(channel: u16, time: u64, stats: &PhaseStatsMsg) -> anyhow::Result<Message> {
-    pack(channel, time, stats)
+pub fn phase_stats(stats: &PhaseStatsMsg) -> Vec<u8> {
+    pack(stats)
 }
 
-pub fn metadata(channel: u16, time: u64, meta: &MetadataMsg) -> anyhow::Result<Message> {
-    pack(channel, time, meta)
+pub fn metadata(meta: &MetadataMsg) -> Vec<u8> {
+    pack(meta)
 }
 
-fn pack<T: Encode>(channel: u16, time: u64, value: &T) -> anyhow::Result<Message>
+fn pack<T: Encode>(value: &T) -> Vec<u8>
 where
     T::Error: Send + Sync + 'static,
 {
     let mut data = Vec::new();
-    value.encode(&mut data)?;
-    Ok(Message {
-        channel_id: channel,
-        log_time: time,
-        publish_time: time,
-        data,
-    })
+    value.encode(&mut data).expect("schema encode");
+    data
 }
 
 fn timestamp(nanos: u64) -> Option<foxglove::schemas::Timestamp> {
-    let sec = nanos / 1_000_000_000;
-    let nsec = (nanos % 1_000_000_000) as u32;
-    u32::try_from(sec)
-        .ok()
-        .and_then(|sec| foxglove::schemas::Timestamp::new_checked(sec, nsec))
-}
-
-fn point_fields() -> Vec<PackedElementField> {
-    use foxglove::schemas::packed_element_field::NumericType;
-    vec![
-        field("x", 0, NumericType::Float32),
-        field("y", 4, NumericType::Float32),
-        field("z", 8, NumericType::Float32),
-        field("red", 12, NumericType::Uint8),
-        field("green", 13, NumericType::Uint8),
-        field("blue", 14, NumericType::Uint8),
-        field("alpha", 15, NumericType::Uint8),
-    ]
+    let sec = u32::try_from(nanos / 1_000_000_000).ok()?;
+    foxglove::schemas::Timestamp::new_checked(sec, (nanos % 1_000_000_000) as u32)
 }
 
 fn field(
@@ -230,30 +182,31 @@ fn field(
     }
 }
 
-fn identity_quat() -> Quaternion {
-    Quaternion {
-        x: 0.0,
-        y: 0.0,
-        z: 0.0,
-        w: 1.0,
-    }
+fn color(r: f64, g: f64, b: f64, a: f64) -> Color {
+    Color { r, g, b, a }
 }
 
 fn identity_pose() -> Pose {
     Pose {
-        position: Some(Vector3 {
+        position: Some(Vector3::default()),
+        orientation: Some(Quaternion {
             x: 0.0,
             y: 0.0,
             z: 0.0,
+            w: 1.0,
         }),
-        orientation: Some(identity_quat()),
     }
 }
 
 fn pose_at(x: f64, y: f64, z: f64) -> Pose {
     Pose {
         position: Some(Vector3 { x, y, z }),
-        orientation: Some(identity_quat()),
+        orientation: Some(Quaternion {
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+        }),
     }
 }
 
@@ -284,12 +237,10 @@ fn box_edges(bounds: Bounds) -> Vec<Point3> {
         (2, 6),
         (3, 7),
     ];
-    let mut points = Vec::with_capacity(EDGES.len() * 2);
-    for (a, b) in EDGES {
-        points.push(point3(corners[a]));
-        points.push(point3(corners[b]));
-    }
-    points
+    EDGES
+        .into_iter()
+        .flat_map(|(a, b)| [point3(corners[a]), point3(corners[b])])
+        .collect()
 }
 
 fn point3(xyz: [f32; 3]) -> Point3 {

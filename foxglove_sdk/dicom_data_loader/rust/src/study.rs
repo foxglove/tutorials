@@ -1,14 +1,12 @@
-//! Group slices into a sweep or a breathing cycle and play them on a timeline.
-
 use std::collections::{BTreeMap, BTreeSet};
-use std::io::Read;
+use std::io::{self, Read};
 use std::rc::Rc;
 
 use foxglove_data_loader::Message;
 
 use crate::messages::{self, MetadataMsg, PhaseStatsMsg, SliceStatsMsg};
-use crate::parse::{self, RawSlice, SliceRead};
-use crate::render::{self, Bounds, Cloud, Geom, GrayImage, SliceView};
+use crate::parse::{self, SliceMeta, SliceRead};
+use crate::render::{self, Geom, SlicePx};
 
 const SWEEP_DT_NS: u64 = 100_000_000;
 const PHASE_DT_NS: u64 = 400_000_000;
@@ -39,6 +37,29 @@ pub enum SchemaKind {
     Metadata,
 }
 
+const TOPICS: &[(u16, &str, SchemaKind)] = &[
+    (CH_AXIAL, "/dicom/axial", SchemaKind::RawImage),
+    (CH_CORONAL, "/dicom/coronal", SchemaKind::RawImage),
+    (CH_SAGITTAL, "/dicom/sagittal", SchemaKind::RawImage),
+    (
+        CH_CORONAL_ANN,
+        "/dicom/coronal/annotations",
+        SchemaKind::ImageAnnotations,
+    ),
+    (
+        CH_SAGITTAL_ANN,
+        "/dicom/sagittal/annotations",
+        SchemaKind::ImageAnnotations,
+    ),
+    (CH_BONE, "/dicom/bone", SchemaKind::PointCloud),
+    (CH_LUNGS, "/dicom/lungs", SchemaKind::PointCloud),
+    (CH_SLICE, "/dicom/slice", SchemaKind::PointCloud),
+    (CH_SCENE, "/dicom/scene", SchemaKind::SceneUpdate),
+    (CH_TF, "/tf", SchemaKind::FrameTransforms),
+    (CH_STATS, "/dicom/stats", SchemaKind::SliceStats),
+    (CH_META, "/dicom/metadata", SchemaKind::Metadata),
+];
+
 #[derive(Clone)]
 pub struct ChannelInfo {
     pub id: u16,
@@ -53,47 +74,31 @@ pub struct EmptyStudy {
     pub warnings: Vec<String>,
 }
 
+struct Entry {
+    log_time: u64,
+    channel: u16,
+    data: Rc<[u8]>,
+}
+
 #[derive(Clone)]
 pub struct Study {
     inner: Rc<Inner>,
 }
 
 struct Inner {
-    mode: &'static str,
-    base_ns: u64,
-    dt_ns: u64,
-    frame_count: usize,
-    slice_count: usize,
-    phase_percents: Vec<f64>,
+    entries: Vec<Entry>,
     channels: Vec<ChannelInfo>,
     warnings: Vec<String>,
     log_line: String,
-    dynamic: Vec<u16>,
-    static_channels: Vec<u16>,
-    payload: Payload,
-    meta: MetadataMsg,
-    label: String,
-    bounds: Bounds,
+    start: u64,
+    end: u64,
 }
 
-enum Payload {
-    Sweep(render::SweepRender),
-    Breathing { phases: Vec<PhaseBody>, bone: Cloud },
-}
-
-struct PhaseBody {
-    axial: GrayImage,
-    coronal: GrayImage,
-    sagittal: GrayImage,
-    lungs: Cloud,
-    stats: PhaseStatsMsg,
-}
-
-struct SlicePx {
-    hu: Vec<i16>,
+struct SliceRef {
+    path_idx: usize,
     ipp: [f64; 3],
-    stack_mm: f64,
     instance: i32,
+    stack_mm: f64,
 }
 
 struct Series {
@@ -115,52 +120,45 @@ struct Series {
     study_description: String,
     study_date: String,
     study_time: String,
-    slices: Vec<SlicePx>,
+    slices: Vec<SliceRef>,
 }
 
-pub fn load_study<R: Read>(readers: impl IntoIterator<Item = R>) -> Result<Study, EmptyStudy> {
-    let mut raw = Vec::new();
+struct Loaded {
+    hu: Vec<i16>,
+    ipp: [f64; 3],
+    stack_mm: f64,
+}
+
+/// Header pass groups every path, then each chosen series is opened again for pixels.
+pub fn load_study<R: Read>(
+    paths: &[String],
+    mut open: impl FnMut(&str) -> io::Result<R>,
+) -> Result<Study, EmptyStudy> {
     let mut skips: BTreeMap<&'static str, usize> = BTreeMap::new();
-    let mut files = 0usize;
-    for reader in readers {
-        files += 1;
-        match parse::read_slice(reader) {
-            Ok(SliceRead::Image(slice)) => raw.push(*slice),
+    let mut headers = Vec::new();
+    for (path_idx, path) in paths.iter().enumerate() {
+        let reader = match open(path) {
+            Ok(reader) => reader,
+            Err(_) => {
+                *skips.entry("that could not be opened").or_default() += 1;
+                continue;
+            }
+        };
+        match parse::read_header(reader) {
+            Ok(SliceRead::Image(meta)) => headers.push((path_idx, *meta)),
             Ok(SliceRead::Skip(reason)) => *skips.entry(reason).or_default() += 1,
             Err(_) => *skips.entry("that could not be parsed").or_default() += 1,
         }
     }
-    if raw.is_empty() {
-        return Err(empty_failure(files, &skips));
+    if headers.is_empty() {
+        return Err(empty_failure(paths.len(), &skips));
     }
-    assemble(raw, skips)
+    assemble(headers, paths, &mut open, skips)
 }
 
 impl Study {
-    pub fn mode(&self) -> &str {
-        self.inner.mode
-    }
-
-    pub fn slice_count(&self) -> usize {
-        self.inner.slice_count
-    }
-
-    pub fn phase_percents(&self) -> &[f64] {
-        &self.inner.phase_percents
-    }
-
-    pub fn frame_count(&self) -> usize {
-        self.inner.frame_count
-    }
-
     pub fn time_range(&self) -> (u64, u64) {
-        let start = self.inner.base_ns;
-        let end = if self.inner.frame_count == 0 {
-            start
-        } else {
-            self.time_of(self.inner.frame_count - 1)
-        };
-        (start, end)
+        (self.inner.start, self.inner.end)
     }
 
     pub fn channels(&self) -> &[ChannelInfo] {
@@ -175,234 +173,41 @@ impl Study {
         &self.inner.log_line
     }
 
-    pub fn image_size(&self, channel: u16, frame: usize) -> Option<(u32, u32)> {
-        self.image(channel, frame)
-            .map(|image| (image.width, image.height))
-    }
-
-    pub fn image_bytes(&self, channel: u16, frame: usize) -> Option<&[u8]> {
-        self.image(channel, frame)
-            .map(|image| image.pixels.as_slice())
-    }
-
-    pub fn point_count(&self, channel: u16, frame: usize) -> Option<usize> {
-        self.cloud(channel, frame).map(Cloud::point_count)
-    }
-
-    pub fn slice_z_mm(&self) -> Vec<f64> {
-        match &self.inner.payload {
-            Payload::Sweep(sweep) => sweep.stats.iter().map(|stat| stat.z_mm).collect(),
-            Payload::Breathing { .. } => Vec::new(),
-        }
-    }
-
-    pub fn lung_volume_ml(&self, frame: usize) -> Option<f64> {
-        match &self.inner.payload {
-            Payload::Breathing { phases, .. } => {
-                Some(phases[frame % phases.len()].stats.lung_volume_ml)
-            }
-            Payload::Sweep(_) => None,
-        }
-    }
-
     pub fn messages(&self, channels: &[u16], start: Option<u64>, end: Option<u64>) -> MessageIter {
         let start = start.unwrap_or(0);
         let end = end.unwrap_or(u64::MAX);
-        let frame = if start > end || self.inner.frame_count == 0 {
-            self.inner.frame_count
+        let index = if start > end {
+            self.inner.entries.len()
         } else {
-            self.first_frame(start)
+            self.inner
+                .entries
+                .partition_point(|entry| entry.log_time < start)
         };
         MessageIter {
             study: self.clone(),
             channels: channels.iter().copied().collect(),
             end,
-            frame,
-            slot: 0,
-            slots: Vec::new(),
+            index,
         }
     }
 
-    pub fn backfill(&self, time: u64, channels: &[u16]) -> anyhow::Result<Vec<Message>> {
+    pub fn backfill(&self, time: u64, channels: &[u16]) -> Vec<Message> {
+        let end = self
+            .inner
+            .entries
+            .partition_point(|entry| entry.log_time <= time);
         let mut messages = Vec::new();
         for &channel in channels {
-            let Some(frame) = self.latest_frame(channel, time) else {
+            let Some(entry) = self.inner.entries[..end]
+                .iter()
+                .rev()
+                .find(|entry| entry.channel == channel)
+            else {
                 continue;
             };
-            messages.push(self.encode(channel, frame, self.time_of(frame))?);
+            messages.push(message(entry));
         }
-        Ok(messages)
-    }
-
-    fn time_of(&self, frame: usize) -> u64 {
-        self.inner.base_ns + self.inner.dt_ns.saturating_mul(frame as u64)
-    }
-
-    fn first_frame(&self, start: u64) -> usize {
-        if start <= self.inner.base_ns {
-            return 0;
-        }
-        let Some(div) = (start - self.inner.base_ns).checked_div(self.inner.dt_ns) else {
-            return 0;
-        };
-        let mut frame = div as usize;
-        if frame < self.inner.frame_count && self.time_of(frame) < start {
-            frame += 1;
-        }
-        frame
-    }
-
-    fn latest_frame(&self, channel: u16, time: u64) -> Option<usize> {
-        if self.inner.frame_count == 0 || time < self.inner.base_ns {
-            return None;
-        }
-        if self.inner.static_channels.contains(&channel) {
-            return Some(0);
-        }
-        if !self.inner.dynamic.contains(&channel) {
-            return None;
-        }
-        let frame = (time - self.inner.base_ns)
-            .checked_div(self.inner.dt_ns)
-            .unwrap_or(0) as usize;
-        Some(frame.min(self.inner.frame_count - 1))
-    }
-
-    fn slots_for(&self, frame: usize, channels: &BTreeSet<u16>) -> Vec<u16> {
-        let mut ids = Vec::new();
-        for &id in &self.inner.dynamic {
-            if channels.contains(&id) {
-                ids.push(id);
-            }
-        }
-        if frame == 0 {
-            for &id in &self.inner.static_channels {
-                if channels.contains(&id) {
-                    ids.push(id);
-                }
-            }
-        }
-        ids.sort_unstable();
-        ids
-    }
-
-    fn encode(&self, channel: u16, frame: usize, time: u64) -> anyhow::Result<Message> {
-        match channel {
-            CH_AXIAL => messages::raw_image(channel, time, "axial", self.axial(frame)),
-            CH_CORONAL => messages::raw_image(channel, time, "coronal", self.coronal(frame)),
-            CH_SAGITTAL => messages::raw_image(channel, time, "sagittal", self.sagittal(frame)),
-            CH_CORONAL_ANN => {
-                let image = self.coronal(frame);
-                let y = self.line_y(true, frame);
-                messages::slice_line(channel, time, image.width, y)
-            }
-            CH_SAGITTAL_ANN => {
-                let image = self.sagittal(frame);
-                let y = self.line_y(false, frame);
-                messages::slice_line(channel, time, image.width, y)
-            }
-            CH_BONE => messages::cloud(channel, time, self.bone()),
-            CH_LUNGS => messages::cloud(channel, time, self.lungs(frame)),
-            CH_SLICE => messages::cloud(channel, time, self.slice_cloud(frame)),
-            CH_SCENE => messages::scene(channel, time, self.inner.bounds, &self.inner.label),
-            CH_TF => messages::transforms(channel, time),
-            CH_STATS => match &self.inner.payload {
-                Payload::Sweep(sweep) => {
-                    let stat = &sweep.stats[frame];
-                    messages::slice_stats(
-                        channel,
-                        time,
-                        &SliceStatsMsg {
-                            z_mm: stat.z_mm,
-                            mean_hu: stat.mean_hu,
-                            lung_area_cm2: stat.lung_area_cm2,
-                            body_area_cm2: stat.body_area_cm2,
-                        },
-                    )
-                }
-                Payload::Breathing { phases, .. } => {
-                    messages::phase_stats(channel, time, &phases[frame % phases.len()].stats)
-                }
-            },
-            CH_META => messages::metadata(channel, time, &self.inner.meta),
-            _ => anyhow::bail!("unknown channel {channel}"),
-        }
-    }
-
-    fn image(&self, channel: u16, frame: usize) -> Option<&GrayImage> {
-        match channel {
-            CH_AXIAL => Some(self.axial(frame)),
-            CH_CORONAL => Some(self.coronal(frame)),
-            CH_SAGITTAL => Some(self.sagittal(frame)),
-            _ => None,
-        }
-    }
-
-    fn axial(&self, frame: usize) -> &GrayImage {
-        match &self.inner.payload {
-            Payload::Sweep(sweep) => &sweep.axial[frame],
-            Payload::Breathing { phases, .. } => &phases[frame % phases.len()].axial,
-        }
-    }
-
-    fn coronal(&self, frame: usize) -> &GrayImage {
-        match &self.inner.payload {
-            Payload::Sweep(sweep) => &sweep.coronal,
-            Payload::Breathing { phases, .. } => &phases[frame % phases.len()].coronal,
-        }
-    }
-
-    fn sagittal(&self, frame: usize) -> &GrayImage {
-        match &self.inner.payload {
-            Payload::Sweep(sweep) => &sweep.sagittal,
-            Payload::Breathing { phases, .. } => &phases[frame % phases.len()].sagittal,
-        }
-    }
-
-    fn line_y(&self, coronal: bool, frame: usize) -> f64 {
-        match &self.inner.payload {
-            Payload::Sweep(sweep) => {
-                if coronal {
-                    sweep.coronal_y[frame]
-                } else {
-                    sweep.sagittal_y[frame]
-                }
-            }
-            Payload::Breathing { .. } => 0.0,
-        }
-    }
-
-    fn bone(&self) -> &Cloud {
-        match &self.inner.payload {
-            Payload::Sweep(sweep) => &sweep.bone,
-            Payload::Breathing { bone, .. } => bone,
-        }
-    }
-
-    fn lungs(&self, frame: usize) -> &Cloud {
-        match &self.inner.payload {
-            Payload::Sweep(sweep) => &sweep.lungs,
-            Payload::Breathing { phases, .. } => &phases[frame % phases.len()].lungs,
-        }
-    }
-
-    fn slice_cloud(&self, frame: usize) -> &Cloud {
-        match &self.inner.payload {
-            Payload::Sweep(sweep) => &sweep.slice_clouds[frame],
-            Payload::Breathing { .. } => panic!("slice clouds are only built in sweep mode"),
-        }
-    }
-
-    fn cloud(&self, channel: u16, frame: usize) -> Option<&Cloud> {
-        match channel {
-            CH_BONE => Some(self.bone()),
-            CH_LUNGS => Some(self.lungs(frame)),
-            CH_SLICE => match &self.inner.payload {
-                Payload::Sweep(sweep) => Some(&sweep.slice_clouds[frame]),
-                Payload::Breathing { .. } => None,
-            },
-            _ => None,
-        }
+        messages
     }
 }
 
@@ -410,64 +215,60 @@ pub struct MessageIter {
     study: Study,
     channels: BTreeSet<u16>,
     end: u64,
-    frame: usize,
-    slot: usize,
-    slots: Vec<u16>,
+    index: usize,
 }
 
 impl Iterator for MessageIter {
     type Item = anyhow::Result<Message>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        loop {
-            if self.frame >= self.study.frame_count() {
+        let entries = &self.study.inner.entries;
+        while self.index < entries.len() {
+            let entry = &entries[self.index];
+            if entry.log_time > self.end {
                 return None;
             }
-            let time = self.study.time_of(self.frame);
-            if time > self.end {
-                return None;
+            self.index += 1;
+            if self.channels.contains(&entry.channel) {
+                return Some(Ok(message(entry)));
             }
-            if self.slot == 0 && self.slots.is_empty() {
-                self.slots = self.study.slots_for(self.frame, &self.channels);
-            }
-            if self.slot >= self.slots.len() {
-                self.frame += 1;
-                self.slot = 0;
-                self.slots.clear();
-                continue;
-            }
-            let channel = self.slots[self.slot];
-            self.slot += 1;
-            return Some(self.study.encode(channel, self.frame, time));
         }
+        None
     }
 }
 
-fn assemble(
-    raw: Vec<RawSlice>,
+fn message(entry: &Entry) -> Message {
+    Message {
+        channel_id: entry.channel,
+        log_time: entry.log_time,
+        publish_time: entry.log_time,
+        data: entry.data.to_vec(),
+    }
+}
+
+fn assemble<R: Read>(
+    headers: Vec<(usize, SliceMeta)>,
+    paths: &[String],
+    open: &mut impl FnMut(&str) -> io::Result<R>,
     mut skips: BTreeMap<&'static str, usize>,
 ) -> Result<Study, EmptyStudy> {
     let mut grouped: BTreeMap<String, Series> = BTreeMap::new();
-    for slice in raw {
-        push_slice(&mut grouped, slice, &mut skips);
+    for (path_idx, meta) in headers {
+        push_header(&mut grouped, path_idx, meta, &mut skips);
     }
     let mut series: Vec<Series> = grouped
         .into_values()
-        .filter(|s| !s.slices.is_empty())
+        .filter(|series| !series.slices.is_empty())
         .collect();
     for series in &mut series {
         finalize(series);
     }
     if series.is_empty() {
-        return Err(empty_failure(0, &skips));
+        return Err(empty_failure(paths.len(), &skips));
     }
 
     let mut warnings = Vec::new();
-    if let Some(skip) = format_skips(&skips) {
-        warnings.push(skip);
-    }
-
-    if let Some(indices) = breathing_group(&series) {
+    let built = if let Some(indices) = breathing_group(&series) {
         let ignored = series.len().saturating_sub(indices.len());
         if ignored > 0 {
             warnings.push(format!(
@@ -476,7 +277,7 @@ fn assemble(
         }
         let mut chosen = take_indices(series, indices);
         chosen.sort_by(phase_order);
-        Ok(build_breathing(chosen, warnings))
+        build_breathing(chosen, paths, open, &mut skips)?
     } else {
         let index = sweep_index(&series);
         let kept = series[index].slices.len();
@@ -487,76 +288,386 @@ fn assemble(
             ));
         }
         let chosen = take_indices(series, vec![index]);
-        Ok(build_sweep(
+        build_sweep(
             chosen.into_iter().next().expect("sweep series"),
+            paths,
+            open,
+            &mut skips,
+        )?
+    };
+    if let Some(text) = format_skips(&skips) {
+        warnings.insert(0, text);
+    }
+    Ok(finish(built, warnings))
+}
+
+fn build_sweep<R: Read>(
+    series: Series,
+    paths: &[String],
+    open: &mut impl FnMut(&str) -> io::Result<R>,
+    skips: &mut BTreeMap<&'static str, usize>,
+) -> Result<Built, EmptyStudy> {
+    let loaded = load_pixels(&series, paths, open, skips);
+    if loaded.is_empty() {
+        return Err(empty_failure(paths.len(), skips));
+    }
+    let geom = geom_of(&series);
+    let view = views(&loaded);
+    let frame = render::patient_frame(&geom, &view);
+    let coronal = render::coronal(&geom, &view);
+    let sagittal = render::sagittal(&geom, &view);
+    let (stats, lungs) = render::lung_stats(&geom, &view, &frame);
+    let bone = render::bone_cloud(&geom, &view, &frame);
+    let base = parse::study_epoch_nanos(&series.study_date, &series.study_time).unwrap_or(0);
+    let mut entries = Vec::new();
+    for (index, slice) in view.iter().enumerate() {
+        let time = base + SWEEP_DT_NS * index as u64;
+        let image = render::window_image(slice.hu, geom.cols, geom.rows, geom.invert);
+        push(
+            &mut entries,
+            time,
+            CH_AXIAL,
+            messages::raw_image(time, "axial", &image),
+        );
+        push(
+            &mut entries,
+            time,
+            CH_CORONAL_ANN,
+            messages::slice_line(time, coronal.image.width, coronal.line_y[index]),
+        );
+        push(
+            &mut entries,
+            time,
+            CH_SAGITTAL_ANN,
+            messages::slice_line(time, sagittal.image.width, sagittal.line_y[index]),
+        );
+        let cloud = render::slice_cloud(&geom, slice, &frame);
+        push(&mut entries, time, CH_SLICE, messages::cloud(time, &cloud));
+        push(
+            &mut entries,
+            time,
+            CH_STATS,
+            messages::slice_stats(&SliceStatsMsg {
+                z_mm: stats[index].z_mm,
+                mean_hu: stats[index].mean_hu,
+                lung_area_cm2: stats[index].lung_area_cm2,
+                body_area_cm2: stats[index].body_area_cm2,
+            }),
+        );
+    }
+    push(
+        &mut entries,
+        base,
+        CH_CORONAL,
+        messages::raw_image(base, "coronal", &coronal.image),
+    );
+    push(
+        &mut entries,
+        base,
+        CH_SAGITTAL,
+        messages::raw_image(base, "sagittal", &sagittal.image),
+    );
+    push(&mut entries, base, CH_BONE, messages::cloud(base, &bone));
+    push(&mut entries, base, CH_LUNGS, messages::cloud(base, &lungs));
+    let label = if series.description.is_empty() {
+        format!("CT · {} slices", loaded.len())
+    } else {
+        series.description.clone()
+    };
+    push(
+        &mut entries,
+        base,
+        CH_SCENE,
+        messages::scene(base, frame.bounds, &label),
+    );
+    push(&mut entries, base, CH_TF, messages::transforms(base));
+    push(
+        &mut entries,
+        base,
+        CH_META,
+        messages::metadata(&metadata(
+            &series,
+            std::slice::from_ref(&series),
+            "sweep",
+            loaded.len(),
+            1,
+        )),
+    );
+    Ok(Built {
+        mode: "sweep",
+        slices: loaded.len(),
+        phases: 1,
+        dt_ns: SWEEP_DT_NS,
+        entries,
+    })
+}
+
+struct PhaseBody {
+    axial: Rc<[u8]>,
+    coronal: Rc<[u8]>,
+    sagittal: Rc<[u8]>,
+    lungs: Rc<[u8]>,
+    stats: Rc<[u8]>,
+}
+
+fn build_breathing<R: Read>(
+    series: Vec<Series>,
+    paths: &[String],
+    open: &mut impl FnMut(&str) -> io::Result<R>,
+    skips: &mut BTreeMap<&'static str, usize>,
+) -> Result<Built, EmptyStudy> {
+    let mut phases = Vec::new();
+    // One origin for every phase. Recentering a later phase would cancel the diaphragm motion.
+    let mut origin = None;
+    let mut bone = None;
+    let base = parse::study_epoch_nanos(&series[0].study_date, &series[0].study_time).unwrap_or(0);
+    for (index, series) in series.iter().enumerate() {
+        let loaded = load_pixels(series, paths, open, skips);
+        if loaded.is_empty() {
+            continue;
+        }
+        let geom = geom_of(series);
+        let view = views(&loaded);
+        let frame = *origin.get_or_insert_with(|| render::patient_frame(&geom, &view));
+        let (stats, lungs) = render::lung_stats(&geom, &view, &frame);
+        let mid = loaded.len() / 2;
+        let time = base + PHASE_DT_NS * phases.len() as u64;
+        let axial =
+            render::window_image(loaded[mid].hu.as_slice(), geom.cols, geom.rows, geom.invert);
+        let coronal = render::coronal(&geom, &view);
+        let sagittal = render::sagittal(&geom, &view);
+        if bone.is_none() {
+            bone = Some(render::bone_cloud(&geom, &view, &frame));
+        }
+        let percent = series.phase.unwrap_or(index as f64);
+        phases.push(PhaseBody {
+            axial: Rc::from(messages::raw_image(time, "axial", &axial)),
+            coronal: Rc::from(messages::raw_image(time, "coronal", &coronal.image)),
+            sagittal: Rc::from(messages::raw_image(time, "sagittal", &sagittal.image)),
+            lungs: Rc::from(messages::cloud(time, &lungs)),
+            stats: Rc::from(messages::phase_stats(&PhaseStatsMsg {
+                phase_percent: percent,
+                lung_volume_ml: render::lung_volume_ml(&geom, &view, &stats),
+            })),
+        });
+    }
+    if phases.is_empty() {
+        return Err(empty_failure(paths.len(), skips));
+    }
+    let head = &series[0];
+    let frame = origin.expect("a phase was rendered");
+    let bone = bone.expect("a phase was rendered");
+    let mut entries = Vec::new();
+    for cycle in 0..BREATH_CYCLES {
+        for (index, phase) in phases.iter().enumerate() {
+            let time = base + PHASE_DT_NS * (cycle * phases.len() + index) as u64;
+            push_rc(&mut entries, time, CH_AXIAL, &phase.axial);
+            push_rc(&mut entries, time, CH_CORONAL, &phase.coronal);
+            push_rc(&mut entries, time, CH_SAGITTAL, &phase.sagittal);
+            push_rc(&mut entries, time, CH_LUNGS, &phase.lungs);
+            push_rc(&mut entries, time, CH_STATS, &phase.stats);
+        }
+    }
+    let label = format!("CT breathing · {} phases", phases.len());
+    push(&mut entries, base, CH_BONE, messages::cloud(base, &bone));
+    push(
+        &mut entries,
+        base,
+        CH_SCENE,
+        messages::scene(base, frame.bounds, &label),
+    );
+    push(&mut entries, base, CH_TF, messages::transforms(base));
+    push(
+        &mut entries,
+        base,
+        CH_META,
+        messages::metadata(&metadata(
+            head,
+            &series,
+            "4d",
+            head.slices.len(),
+            phases.len(),
+        )),
+    );
+    Ok(Built {
+        mode: "4d",
+        slices: head.slices.len(),
+        phases: phases.len(),
+        dt_ns: PHASE_DT_NS,
+        entries,
+    })
+}
+
+struct Built {
+    mode: &'static str,
+    slices: usize,
+    phases: usize,
+    dt_ns: u64,
+    entries: Vec<Entry>,
+}
+
+fn finish(built: Built, warnings: Vec<String>) -> Study {
+    let Built {
+        mode,
+        slices,
+        phases,
+        dt_ns,
+        mut entries,
+    } = built;
+    entries.sort_by(|a, b| a.log_time.cmp(&b.log_time).then(a.channel.cmp(&b.channel)));
+    let start = entries.first().map(|entry| entry.log_time).unwrap_or(0);
+    let end = entries.last().map(|entry| entry.log_time).unwrap_or(start);
+    let frame_count = ((end - start) / dt_ns) as usize + 1;
+    let channels = channels_from(&entries, mode);
+    let log_line = format!(
+        "{mode} mode: {slices} slices, {phases} phase(s), {frame_count} frames, {} ms/frame",
+        dt_ns / 1_000_000
+    );
+    Study {
+        inner: Rc::new(Inner {
+            entries,
+            channels,
             warnings,
-        ))
+            log_line,
+            start,
+            end,
+        }),
     }
 }
 
-fn push_slice(
+fn channels_from(entries: &[Entry], mode: &str) -> Vec<ChannelInfo> {
+    TOPICS
+        .iter()
+        .filter_map(|(id, topic, kind)| {
+            let kind = if *id == CH_STATS && mode == "4d" {
+                SchemaKind::PhaseStats
+            } else {
+                *kind
+            };
+            let count = entries.iter().filter(|entry| entry.channel == *id).count() as u64;
+            (count > 0).then_some(ChannelInfo {
+                id: *id,
+                topic,
+                message_count: count,
+                kind,
+            })
+        })
+        .collect()
+}
+
+fn push(entries: &mut Vec<Entry>, time: u64, channel: u16, data: Vec<u8>) {
+    entries.push(Entry {
+        log_time: time,
+        channel,
+        data: Rc::from(data),
+    });
+}
+
+fn push_rc(entries: &mut Vec<Entry>, time: u64, channel: u16, data: &Rc<[u8]>) {
+    entries.push(Entry {
+        log_time: time,
+        channel,
+        data: Rc::clone(data),
+    });
+}
+
+fn load_pixels<R: Read>(
+    series: &Series,
+    paths: &[String],
+    open: &mut impl FnMut(&str) -> io::Result<R>,
+    skips: &mut BTreeMap<&'static str, usize>,
+) -> Vec<Loaded> {
+    let mut loaded = Vec::with_capacity(series.slices.len());
+    for slice in &series.slices {
+        let reader = match open(&paths[slice.path_idx]) {
+            Ok(reader) => reader,
+            Err(_) => {
+                *skips.entry("that could not be opened").or_default() += 1;
+                continue;
+            }
+        };
+        match parse::read_pixels(reader) {
+            Ok(SliceRead::Image(meta)) => {
+                let Some(hu) = meta.hu else {
+                    *skips.entry("without pixel data").or_default() += 1;
+                    continue;
+                };
+                loaded.push(Loaded {
+                    hu,
+                    ipp: slice.ipp,
+                    stack_mm: slice.stack_mm,
+                });
+            }
+            Ok(SliceRead::Skip(reason)) => *skips.entry(reason).or_default() += 1,
+            Err(_) => *skips.entry("that could not be parsed").or_default() += 1,
+        }
+    }
+    loaded
+}
+
+fn push_header(
     grouped: &mut BTreeMap<String, Series>,
-    slice: RawSlice,
+    path_idx: usize,
+    meta: SliceMeta,
     skips: &mut BTreeMap<&'static str, usize>,
 ) {
-    if let Some(series) = grouped.get_mut(&slice.series_uid) {
-        if !compatible(series, &slice) {
+    if let Some(series) = grouped.get_mut(&meta.series_uid) {
+        if !compatible(series, &meta) {
             *skips.entry("with inconsistent geometry").or_default() += 1;
             return;
         }
-        series.slices.push(SlicePx {
-            hu: slice.hu,
-            ipp: slice.ipp,
+        series.slices.push(SliceRef {
+            path_idx,
+            ipp: meta.ipp,
+            instance: meta.instance,
             stack_mm: 0.0,
-            instance: slice.instance,
         });
         return;
     }
-    let uid = slice.series_uid.clone();
-    grouped.insert(uid, Series::from_first(slice));
+    let uid = meta.series_uid.clone();
+    grouped.insert(uid, Series::from_first(path_idx, meta));
 }
 
 impl Series {
-    fn from_first(slice: RawSlice) -> Self {
-        let normal = unit_normal(slice.row_dir, slice.col_dir);
-        let phase = parse::phase_percent(&slice.series_description);
-        let pixels = SlicePx {
-            hu: slice.hu,
-            ipp: slice.ipp,
-            stack_mm: 0.0,
-            instance: slice.instance,
-        };
+    fn from_first(path_idx: usize, meta: SliceMeta) -> Self {
+        let phase = parse::phase_percent(&meta.series_description);
+        let normal = unit_normal(meta.row_dir, meta.col_dir);
         Self {
-            description: slice.series_description,
-            number: slice.series_number,
-            for_uid: slice.frame_of_reference,
+            description: meta.series_description,
+            number: meta.series_number,
+            for_uid: meta.frame_of_reference,
             phase,
-            rows: slice.rows,
-            cols: slice.cols,
-            row_spacing: slice.row_spacing,
-            col_spacing: slice.col_spacing,
-            row_dir: slice.row_dir,
-            col_dir: slice.col_dir,
+            rows: meta.rows,
+            cols: meta.cols,
+            row_spacing: meta.row_spacing,
+            col_spacing: meta.col_spacing,
+            row_dir: meta.row_dir,
+            col_dir: meta.col_dir,
             normal,
-            invert: slice.invert,
-            thickness: slice.thickness,
-            modality: slice.modality,
-            manufacturer: slice.manufacturer,
-            study_description: slice.study_description,
-            study_date: slice.study_date,
-            study_time: slice.study_time,
-            slices: vec![pixels],
+            invert: meta.invert,
+            thickness: meta.thickness,
+            modality: meta.modality,
+            manufacturer: meta.manufacturer,
+            study_description: meta.study_description,
+            study_date: meta.study_date,
+            study_time: meta.study_time,
+            slices: vec![SliceRef {
+                path_idx,
+                ipp: meta.ipp,
+                instance: meta.instance,
+                stack_mm: 0.0,
+            }],
         }
     }
 }
 
-fn compatible(series: &Series, slice: &RawSlice) -> bool {
-    series.rows == slice.rows
-        && series.cols == slice.cols
-        && (series.row_spacing - slice.row_spacing).abs() < 0.05
-        && (series.col_spacing - slice.col_spacing).abs() < 0.05
-        && dot(series.row_dir, slice.row_dir) > 0.999
-        && dot(series.col_dir, slice.col_dir) > 0.999
+fn compatible(series: &Series, meta: &SliceMeta) -> bool {
+    series.rows == meta.rows
+        && series.cols == meta.cols
+        && (series.row_spacing - meta.row_spacing).abs() < 0.05
+        && (series.col_spacing - meta.col_spacing).abs() < 0.05
+        && dot(series.row_dir, meta.row_dir) > 0.999
+        && dot(series.col_dir, meta.col_dir) > 0.999
 }
 
 fn finalize(series: &mut Series) {
@@ -628,202 +739,6 @@ fn take_indices(series: Vec<Series>, mut indices: Vec<usize>) -> Vec<Series> {
     chosen
 }
 
-fn build_sweep(series: Series, warnings: Vec<String>) -> Study {
-    let rendered = {
-        let geom = geom_of(&series);
-        let views = views(&series);
-        render::sweep(&geom, &views)
-    };
-    let frames = series.slices.len();
-    let (channels, dynamic, static_channels) = sweep_channels(frames as u64);
-    finish(
-        "sweep",
-        &series,
-        std::slice::from_ref(&series),
-        frames,
-        1,
-        SWEEP_DT_NS,
-        channels,
-        dynamic,
-        static_channels,
-        warnings,
-        Vec::new(),
-        rendered.frame.bounds,
-        sweep_label(&series),
-        Payload::Sweep(rendered),
-    )
-}
-
-fn build_breathing(series: Vec<Series>, warnings: Vec<String>) -> Study {
-    let origin = {
-        let geom = geom_of(&series[0]);
-        let views = views(&series[0]);
-        render::patient_frame(&geom, &views)
-    };
-    let mut phases = Vec::with_capacity(series.len());
-    let mut percents = Vec::with_capacity(series.len());
-    let mut bone = None;
-    for (index, series) in series.iter().enumerate() {
-        percents.push(series.phase.unwrap_or(index as f64));
-        let geom = geom_of(series);
-        let views = views(series);
-        let rendered = render::phase(&geom, &views, &origin, index == 0);
-        if let Some(cloud) = rendered.bone {
-            bone = Some(cloud);
-        }
-        phases.push(PhaseBody {
-            axial: rendered.axial,
-            coronal: rendered.coronal,
-            sagittal: rendered.sagittal,
-            lungs: rendered.lungs,
-            stats: PhaseStatsMsg {
-                phase_percent: percents[index],
-                lung_volume_ml: rendered.lung_volume_ml,
-            },
-        });
-    }
-    let phase_count = phases.len();
-    let frames = phase_count * BREATH_CYCLES;
-    let (channels, dynamic, static_channels) = breathing_channels(frames as u64);
-    let head = &series[0];
-    finish(
-        "4d",
-        head,
-        &series,
-        head.slices.len(),
-        phase_count,
-        PHASE_DT_NS,
-        channels,
-        dynamic,
-        static_channels,
-        warnings,
-        percents,
-        origin.bounds,
-        format!("CT breathing · {phase_count} phases"),
-        Payload::Breathing {
-            phases,
-            bone: bone.expect("the first phase builds the bone cloud"),
-        },
-    )
-}
-
-#[allow(clippy::too_many_arguments)]
-fn finish(
-    mode: &'static str,
-    head: &Series,
-    described: &[Series],
-    slice_count: usize,
-    phase_count: usize,
-    dt_ns: u64,
-    channels: Vec<ChannelInfo>,
-    dynamic: Vec<u16>,
-    static_channels: Vec<u16>,
-    warnings: Vec<String>,
-    phase_percents: Vec<f64>,
-    bounds: Bounds,
-    label: String,
-    payload: Payload,
-) -> Study {
-    let frame_count = match &payload {
-        Payload::Sweep(sweep) => sweep.axial.len(),
-        Payload::Breathing { phases, .. } => phases.len() * BREATH_CYCLES,
-    };
-    let base_ns = parse::study_epoch_nanos(&head.study_date, &head.study_time).unwrap_or(0);
-    let log_line = format!(
-        "{mode} mode: {slice_count} slices, {phase_count} phase(s), {frame_count} frames, {} ms/frame",
-        dt_ns / 1_000_000
-    );
-    Study {
-        inner: Rc::new(Inner {
-            mode,
-            base_ns,
-            dt_ns,
-            frame_count,
-            slice_count,
-            phase_percents,
-            channels,
-            warnings,
-            log_line,
-            dynamic,
-            static_channels,
-            payload,
-            meta: metadata(head, described, mode, slice_count, phase_count),
-            label,
-            bounds,
-        }),
-    }
-}
-
-fn sweep_channels(frames: u64) -> (Vec<ChannelInfo>, Vec<u16>, Vec<u16>) {
-    let channels = vec![
-        channel(CH_AXIAL, "/dicom/axial", frames, SchemaKind::RawImage),
-        channel(CH_CORONAL, "/dicom/coronal", 1, SchemaKind::RawImage),
-        channel(CH_SAGITTAL, "/dicom/sagittal", 1, SchemaKind::RawImage),
-        channel(
-            CH_CORONAL_ANN,
-            "/dicom/coronal/annotations",
-            frames,
-            SchemaKind::ImageAnnotations,
-        ),
-        channel(
-            CH_SAGITTAL_ANN,
-            "/dicom/sagittal/annotations",
-            frames,
-            SchemaKind::ImageAnnotations,
-        ),
-        channel(CH_BONE, "/dicom/bone", 1, SchemaKind::PointCloud),
-        channel(CH_LUNGS, "/dicom/lungs", 1, SchemaKind::PointCloud),
-        channel(CH_SLICE, "/dicom/slice", frames, SchemaKind::PointCloud),
-        channel(CH_SCENE, "/dicom/scene", 1, SchemaKind::SceneUpdate),
-        channel(CH_TF, "/tf", 1, SchemaKind::FrameTransforms),
-        channel(CH_STATS, "/dicom/stats", frames, SchemaKind::SliceStats),
-        channel(CH_META, "/dicom/metadata", 1, SchemaKind::Metadata),
-    ];
-    let dynamic = vec![
-        CH_AXIAL,
-        CH_CORONAL_ANN,
-        CH_SAGITTAL_ANN,
-        CH_SLICE,
-        CH_STATS,
-    ];
-    let static_channels = vec![
-        CH_CORONAL,
-        CH_SAGITTAL,
-        CH_BONE,
-        CH_LUNGS,
-        CH_SCENE,
-        CH_TF,
-        CH_META,
-    ];
-    (channels, dynamic, static_channels)
-}
-
-fn breathing_channels(frames: u64) -> (Vec<ChannelInfo>, Vec<u16>, Vec<u16>) {
-    let channels = vec![
-        channel(CH_AXIAL, "/dicom/axial", frames, SchemaKind::RawImage),
-        channel(CH_CORONAL, "/dicom/coronal", frames, SchemaKind::RawImage),
-        channel(CH_SAGITTAL, "/dicom/sagittal", frames, SchemaKind::RawImage),
-        channel(CH_BONE, "/dicom/bone", 1, SchemaKind::PointCloud),
-        channel(CH_LUNGS, "/dicom/lungs", frames, SchemaKind::PointCloud),
-        channel(CH_SCENE, "/dicom/scene", 1, SchemaKind::SceneUpdate),
-        channel(CH_TF, "/tf", 1, SchemaKind::FrameTransforms),
-        channel(CH_STATS, "/dicom/stats", frames, SchemaKind::PhaseStats),
-        channel(CH_META, "/dicom/metadata", 1, SchemaKind::Metadata),
-    ];
-    let dynamic = vec![CH_AXIAL, CH_CORONAL, CH_SAGITTAL, CH_LUNGS, CH_STATS];
-    let static_channels = vec![CH_BONE, CH_SCENE, CH_TF, CH_META];
-    (channels, dynamic, static_channels)
-}
-
-fn channel(id: u16, topic: &'static str, message_count: u64, kind: SchemaKind) -> ChannelInfo {
-    ChannelInfo {
-        id,
-        topic,
-        message_count,
-        kind,
-    }
-}
-
 fn metadata(
     head: &Series,
     described: &[Series],
@@ -831,11 +746,17 @@ fn metadata(
     slice_count: usize,
     phase_count: usize,
 ) -> MetadataMsg {
+    let mut parts = Vec::new();
+    for series in described {
+        if !series.description.is_empty() && !parts.contains(&series.description) {
+            parts.push(series.description.clone());
+        }
+    }
     MetadataMsg {
         modality: head.modality.clone(),
         manufacturer: head.manufacturer.clone(),
         study_description: head.study_description.clone(),
-        series_description: joined_descriptions(described),
+        series_description: parts.join("; "),
         rows: head.rows as u32,
         cols: head.cols as u32,
         row_spacing_mm: head.row_spacing,
@@ -844,24 +765,6 @@ fn metadata(
         slice_count: slice_count as u32,
         phase_count: phase_count as u32,
         mode: mode.to_string(),
-    }
-}
-
-fn joined_descriptions(series: &[Series]) -> String {
-    let mut parts = Vec::new();
-    for series in series {
-        if !series.description.is_empty() && !parts.contains(&series.description) {
-            parts.push(series.description.clone());
-        }
-    }
-    parts.join("; ")
-}
-
-fn sweep_label(series: &Series) -> String {
-    if series.description.is_empty() {
-        format!("CT · {} slices", series.slices.len())
-    } else {
-        series.description.clone()
     }
 }
 
@@ -890,11 +793,10 @@ fn geom_of(series: &Series) -> Geom {
     }
 }
 
-fn views(series: &Series) -> Vec<SliceView<'_>> {
-    series
-        .slices
+fn views(loaded: &[Loaded]) -> Vec<SlicePx<'_>> {
+    loaded
         .iter()
-        .map(|slice| SliceView {
+        .map(|slice| SlicePx {
             hu: &slice.hu,
             ipp: slice.ipp,
             stack_mm: slice.stack_mm,
@@ -915,7 +817,6 @@ fn format_skips(skips: &BTreeMap<&'static str, usize>) -> Option<String> {
 }
 
 fn empty_failure(files: usize, skips: &BTreeMap<&'static str, usize>) -> EmptyStudy {
-    let warnings = format_skips(skips).into_iter().collect();
     EmptyStudy {
         message: if files == 0 {
             "No DICOM files were provided".to_string()
@@ -923,7 +824,7 @@ fn empty_failure(files: usize, skips: &BTreeMap<&'static str, usize>) -> EmptySt
             "No supported CT slices were found".to_string()
         },
         tip: "Open every .dcm file from one series (or one 4D study) together. Only uncompressed little-endian monochrome images are read.".to_string(),
-        warnings,
+        warnings: format_skips(skips).into_iter().collect(),
     }
 }
 
@@ -948,18 +849,76 @@ fn dot(a: [f64; 3], b: [f64; 3]) -> f64 {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use prost::Message as ProstMessage;
     use std::path::{Path, PathBuf};
 
+    // Foxglove's Timestamp::merge_field is unimplemented, so the schema types cannot be decoded.
+    #[derive(Clone, PartialEq, prost::Message)]
+    struct ImageMsg {
+        #[prost(fixed32, tag = "2")]
+        width: u32,
+        #[prost(fixed32, tag = "3")]
+        height: u32,
+        #[prost(string, tag = "4")]
+        encoding: String,
+        #[prost(bytes = "vec", tag = "6")]
+        data: Vec<u8>,
+    }
+
+    #[derive(Clone, PartialEq, prost::Message)]
+    struct CloudMsg {
+        #[prost(bytes = "vec", tag = "6")]
+        data: Vec<u8>,
+    }
+
+    #[derive(Clone, PartialEq, prost::Message)]
+    struct SliceStats {
+        #[prost(double, tag = "1")]
+        z_mm: f64,
+    }
+
+    #[derive(Clone, PartialEq, prost::Message)]
+    struct PhaseStats {
+        #[prost(double, tag = "1")]
+        phase_percent: f64,
+        #[prost(double, tag = "2")]
+        lung_volume_ml: f64,
+    }
+
+    #[derive(Clone, PartialEq, prost::Message)]
+    struct Meta {
+        #[prost(uint32, tag = "10")]
+        slice_count: u32,
+        #[prost(uint32, tag = "11")]
+        phase_count: u32,
+        #[prost(string, tag = "12")]
+        mode: String,
+    }
+
+    fn data_root() -> PathBuf {
+        match std::env::var("DICOM_DATA_DIR") {
+            Ok(dir) => PathBuf::from(dir),
+            Err(_) => PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../data"),
+        }
+    }
+
     fn load_optional(name: &str) -> Option<Study> {
-        let Ok(root) = std::env::var("DICOM_DATA_DIR") else {
-            eprintln!("skip {name}: DICOM_DATA_DIR is not set");
+        let dir = data_root().join(name);
+        if !dir.is_dir() {
+            eprintln!("skip {name}: {} is absent", dir.display());
             return None;
-        };
-        let dir = PathBuf::from(root).join(name);
+        }
         let files = collect_dcm(&dir);
-        assert!(!files.is_empty(), "no .dcm files under {}", dir.display());
-        eprintln!("loading {name} ({} files)", files.len());
-        let study = load_study(files.iter().map(|path| std::fs::File::open(path).unwrap()))
+        if files.is_empty() {
+            eprintln!("skip {name}: no .dcm files in {}", dir.display());
+            return None;
+        }
+        let paths: Vec<String> = files
+            .iter()
+            .map(|path| path.display().to_string())
+            .collect();
+        eprintln!("loading {name} ({} files)", paths.len());
+        let study = load_study(&paths, |path| std::fs::File::open(path))
             .unwrap_or_else(|err| panic!("{}: {}", err.message, err.tip));
         eprintln!("{}", study.log_line());
         Some(study)
@@ -988,12 +947,50 @@ mod tests {
         out
     }
 
+    fn of_channel(study: &Study, channel: u16) -> Vec<Message> {
+        study
+            .messages(&[channel], None, None)
+            .map(|message| message.unwrap())
+            .collect()
+    }
+
+    fn decode<T: ProstMessage + Default>(message: &Message) -> T {
+        T::decode(message.data.as_slice()).expect("prost decode")
+    }
+
+    fn assert_image(message: &Message, width: u32) -> ImageMsg {
+        let image: ImageMsg = decode(message);
+        assert_eq!(image.width, width);
+        assert!(image.height > 0);
+        assert_eq!(image.encoding, "mono8");
+        assert_eq!(
+            image.data.len(),
+            image.width as usize * image.height as usize
+        );
+        assert!(image.data.iter().any(|value| *value > 20));
+        assert!(image.data.iter().any(|value| *value < 230));
+        image
+    }
+
+    fn point_count(message: &Message) -> usize {
+        decode::<CloudMsg>(message).data.len() / render::POINT_STRIDE
+    }
+
     fn assert_playback(study: &Study, dt: u64) {
         let (start, end) = study.time_range();
         assert!(start > 0, "study clock should parse");
-        assert_eq!(end - start, (study.frame_count() as u64 - 1) * dt);
+        assert_eq!(
+            end - start,
+            (study
+                .channels()
+                .iter()
+                .map(|channel| channel.message_count)
+                .max()
+                .unwrap_or(1)
+                - 1)
+                * dt
+        );
         assert!(study.warnings().is_empty(), "{:?}", study.warnings());
-
         let ids: Vec<u16> = study.channels().iter().map(|channel| channel.id).collect();
         let mut last = None;
         let mut counts: BTreeMap<u16, u64> = BTreeMap::new();
@@ -1028,18 +1025,21 @@ mod tests {
         assert_eq!(partial.len(), 2);
         assert_eq!(partial[0].log_time, start + dt);
         assert_eq!(partial[1].log_time, start + 2 * dt);
-        assert!(partial.iter().all(|message| message.channel_id == CH_AXIAL));
 
-        assert!(study.backfill(start - 1, &ids).unwrap().is_empty());
-        let at_start = study.backfill(start, &ids).unwrap();
+        assert!(study.backfill(start - 1, &ids).is_empty());
+        let at_start = study.backfill(start, &ids);
         assert_eq!(at_start.len(), ids.len());
         assert!(at_start.iter().all(|message| message.log_time == start));
-        let between = study.backfill(start + dt / 2, &ids).unwrap();
-        assert!(between.iter().all(|message| message.log_time == start));
-        let stepped = study.backfill(start + dt, &[CH_AXIAL]).unwrap();
+        assert!(
+            study
+                .backfill(start + dt / 2, &ids)
+                .iter()
+                .all(|message| message.log_time == start)
+        );
+        let stepped = study.backfill(start + dt, &[CH_AXIAL]);
         assert_eq!(stepped.len(), 1);
         assert_eq!(stepped[0].log_time, start + dt);
-        let past = study.backfill(end + dt, &[CH_AXIAL, CH_BONE]).unwrap();
+        let past = study.backfill(end + dt, &[CH_AXIAL, CH_BONE]);
         assert_eq!(
             past.iter()
                 .find(|message| message.channel_id == CH_AXIAL)
@@ -1056,39 +1056,33 @@ mod tests {
         );
     }
 
-    fn assert_image(study: &Study, channel: u16, frame: usize, width: u32) {
-        let (w, h) = study.image_size(channel, frame).unwrap();
-        assert_eq!(w, width);
-        assert!(h > 0);
-        let pixels = study.image_bytes(channel, frame).unwrap();
-        assert_eq!(pixels.len(), w as usize * h as usize);
-        assert!(pixels.iter().any(|value| *value > 20));
-        assert!(pixels.iter().any(|value| *value < 230));
-    }
-
     #[test]
-    fn lidc_is_a_sweep_through_the_chest() {
-        let Some(study) = load_optional("lidc") else {
+    fn chest_is_a_sweep() {
+        let Some(study) = load_optional("chest") else {
             return;
         };
-        assert_eq!(study.mode(), "sweep");
-        assert_eq!(study.slice_count(), 133);
-        assert_eq!(study.frame_count(), 133);
-        assert!(study.phase_percents().is_empty());
+        assert!(study.log_line().starts_with("sweep mode"));
         assert_playback(&study, SWEEP_DT_NS);
-        assert_image(&study, CH_AXIAL, 66, 512);
-        let (coronal_w, coronal_h) = study.image_size(CH_CORONAL, 0).unwrap();
-        assert_eq!(coronal_w, 512);
-        assert!(coronal_h > 200, "coronal height {coronal_h}");
-        let (sagittal_w, sagittal_h) = study.image_size(CH_SAGITTAL, 0).unwrap();
-        assert_eq!(sagittal_w, 512);
-        assert!(sagittal_h > 200, "sagittal height {sagittal_h}");
-        let z = study.slice_z_mm();
+        let meta: Meta = decode(&of_channel(&study, CH_META)[0]);
+        assert_eq!(meta.mode, "sweep");
+        assert_eq!(meta.slice_count, 133);
+        let axial = of_channel(&study, CH_AXIAL);
+        assert_eq!(axial.len(), 133);
+        assert_image(&axial[66], 512);
+        let coronal = assert_image(&of_channel(&study, CH_CORONAL)[0], 512);
+        assert!(coronal.height > 300, "coronal height {}", coronal.height);
+        let sagittal = assert_image(&of_channel(&study, CH_SAGITTAL)[0], 512);
+        assert!(sagittal.height > 300, "sagittal height {}", sagittal.height);
+        let z: Vec<f64> = of_channel(&study, CH_STATS)
+            .iter()
+            .map(|message| decode::<SliceStats>(message).z_mm)
+            .collect();
         assert_eq!(z.len(), 133);
         assert!(z.windows(2).all(|pair| pair[1] >= pair[0]));
         assert!(z.last().unwrap() - z.first().unwrap() > 200.0);
         for channel in [CH_BONE, CH_LUNGS, CH_SLICE] {
-            let points = study.point_count(channel, 66).unwrap();
+            let points =
+                point_count(&of_channel(&study, channel)[if channel == CH_SLICE { 66 } else { 0 }]);
             assert!(
                 points > 100 && points <= render::MAX_CLOUD_POINTS,
                 "{channel} {points}"
@@ -1097,49 +1091,58 @@ mod tests {
     }
 
     #[test]
-    fn lung_4d_plays_ten_breathing_phases() {
-        let Some(study) = load_optional("4dlung") else {
+    fn breathing_plays_ten_phases() {
+        let Some(study) = load_optional("breathing") else {
             return;
         };
-        assert_eq!(study.mode(), "4d");
-        assert_eq!(study.slice_count(), 50);
-        assert_eq!(study.frame_count(), 30);
-        assert_eq!(
-            study.phase_percents(),
-            [0.0, 10.0, 20.0, 30.0, 40.0, 50.0, 60.0, 70.0, 80.0, 90.0]
-        );
+        assert!(study.log_line().starts_with("4d mode"));
+        assert_playback(&study, PHASE_DT_NS);
+        let meta: Meta = decode(&of_channel(&study, CH_META)[0]);
+        assert_eq!(meta.mode, "4d");
+        assert_eq!(meta.slice_count, 142);
+        assert_eq!(meta.phase_count, 10);
         assert!(
             study
                 .channels()
                 .iter()
                 .all(|channel| channel.id != CH_SLICE)
         );
-        assert_playback(&study, PHASE_DT_NS);
-        assert_image(&study, CH_AXIAL, 0, 512);
-        let (width, height) = study.image_size(CH_CORONAL, 0).unwrap();
-        assert_eq!(width, 512);
-        assert!(height > 80, "coronal height {height}");
-        assert_ne!(
-            study.image_bytes(CH_CORONAL, 0).unwrap(),
-            study.image_bytes(CH_CORONAL, 5).unwrap()
-        );
+        let coronal = of_channel(&study, CH_CORONAL);
+        assert_eq!(coronal.len(), 30);
+        let phase0 = assert_image(&coronal[0], 512);
+        assert!(phase0.height > 300, "coronal height {}", phase0.height);
+        let phase50 = assert_image(&coronal[5], 512);
+        let phase50_again = assert_image(&coronal[15], 512);
+        assert_ne!(phase0.data, phase50.data);
+        assert_eq!(phase50.data, phase50_again.data);
+        let stats: Vec<PhaseStats> = of_channel(&study, CH_STATS)
+            .into_iter()
+            .take(10)
+            .map(|message| decode(&message))
+            .collect();
+        let percents: Vec<f64> = stats.iter().map(|stat| stat.phase_percent).collect();
         assert_eq!(
-            study.image_bytes(CH_CORONAL, 5).unwrap(),
-            study.image_bytes(CH_CORONAL, 15).unwrap()
+            percents,
+            [0.0, 10.0, 20.0, 30.0, 40.0, 50.0, 60.0, 70.0, 80.0, 90.0]
         );
-        let inhale = study.lung_volume_ml(0).unwrap();
-        let mid = study.lung_volume_ml(5).unwrap();
-        assert!(inhale > 200.0 && inhale < 20_000.0, "{inhale}");
-        assert!(mid > 200.0 && mid < 20_000.0, "{mid}");
-        assert!((inhale - mid).abs() > 1.0, "{inhale} vs {mid}");
-        for frame in 0..10 {
-            let points = study.point_count(CH_LUNGS, frame).unwrap();
+        let volumes: Vec<f64> = stats.iter().map(|stat| stat.lung_volume_ml).collect();
+        eprintln!("lung_volume_ml: {volumes:?}");
+        assert!(
+            volumes
+                .iter()
+                .all(|volume| (800.0..8_000.0).contains(volume)),
+            "{volumes:?}"
+        );
+        let min = volumes.iter().copied().fold(f64::MAX, f64::min);
+        let max = volumes.iter().copied().fold(f64::MIN, f64::max);
+        assert!(max - min > 100.0, "{volumes:?}");
+        for channel in [CH_BONE, CH_LUNGS] {
+            let index = if channel == CH_LUNGS { 5 } else { 0 };
+            let points = point_count(&of_channel(&study, channel)[index]);
             assert!(
                 points > 100 && points <= render::MAX_CLOUD_POINTS,
-                "frame {frame} {points}"
+                "{channel} {points}"
             );
         }
-        let bone = study.point_count(CH_BONE, 0).unwrap();
-        assert!(bone > 100 && bone <= render::MAX_CLOUD_POINTS, "{bone}");
     }
 }

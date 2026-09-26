@@ -1,7 +1,4 @@
-//! DICOM CT data loader for Foxglove.
-//!
-//! [`load_study`] turns `.dcm` readers into timeline messages. The WASM adapter
-//! is the only piece that talks to the Foxglove host.
+//! DICOM CT series played on a Foxglove timeline.
 
 mod messages;
 mod parse;

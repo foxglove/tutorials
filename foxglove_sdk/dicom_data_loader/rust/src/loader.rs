@@ -1,5 +1,3 @@
-//! WASM entry points. Foxglove calls these; the study itself is host-agnostic.
-
 use foxglove::schemas::{FrameTransforms, ImageAnnotations, PointCloud, RawImage, SceneUpdate};
 use foxglove_data_loader::{
     BackfillArgs, DataLoader, DataLoaderArgs, Initialization, InitializationBuilder, Message,
@@ -26,8 +24,7 @@ impl DataLoader for DicomLoader {
     }
 
     fn initialize(&mut self) -> Result<Initialization, Self::Error> {
-        let readers = self.paths.iter().map(|path| reader::open(path));
-        match load_study(readers) {
+        match load_study(&self.paths, |path| Ok(reader::open(path))) {
             Ok(study) => {
                 console::log(study.log_line());
                 let init = describe(&study)?;
@@ -50,10 +47,10 @@ impl DataLoader for DicomLoader {
     }
 
     fn get_backfill(&mut self, args: BackfillArgs) -> Result<Vec<Message>, Self::Error> {
-        match &self.study {
+        Ok(match &self.study {
             Some(study) => study.backfill(args.time, &args.channels),
-            None => Ok(Vec::new()),
-        }
+            None => Vec::new(),
+        })
     }
 }
 
