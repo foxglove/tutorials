@@ -4,6 +4,7 @@ services:
       context: .
       args:
         INTRINSIC_MOVEIT_COMMIT: c5e3290aa0f0e64c2d106a2fb4eb10cb52592205
+        ROS_APT_SNAPSHOT: "2026-09-11"
     image: foxglove-tutorials/intrinsic-moveit-demo:latest
     ports:
       - "8765:8765"

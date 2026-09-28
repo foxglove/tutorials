@@ -61,7 +61,13 @@ flowchart LR
 
 No display server or GPU is required. The container launches MoveIt with `headless:=true`.
 
-The base image is pinned to `ros:jazzy-ros-base@sha256:c3706ef0a0aa45413c07803cf433602f543b22e45b4855f6fca955c2d8ecc4e8`. Apt packages are not pinned: `snapshots.ros.org` has Jazzy indexes, but none for the September 2026 set this tutorial was tested with (the newest indexed dates are from 2024), so the build follows `packages.ros.org`. Versions observed in the image:
+The base image is pinned to `ros:jazzy-ros-base@sha256:c3706ef0a0aa45413c07803cf433602f543b22e45b4855f6fca955c2d8ecc4e8`. ROS apt packages are pinned to the Jazzy snapshot `2026-09-11` on `snapshots.ros.org` (build arg `ROS_APT_SNAPSHOT`), signed by the ROS snapshot key `4B63CF8FDE49746E98FA01DDAD19BAB3CBF125EA`, which expires 2027-06-01. Override the date with:
+
+```bash
+docker compose build --build-arg ROS_APT_SNAPSHOT=YYYY-MM-DD
+```
+
+The Ubuntu archive itself is not pinned. Versions from that snapshot:
 
 | Package | Version observed in this image |
 | --- | --- |
@@ -126,7 +132,7 @@ The arm stands on a grey table. The shaded rectangle is the OMTS return-shift wi
 | `RETREAT_UP` | The tool backs off |
 | `PARK` | The gripper closes and the arm returns to the work-facing home pose. The cycle counter increments |
 
-Home is the SRDF `ready` pose with `shoulder_pan_joint` rotated by π (`-2.8173` instead of `-0.1597`), so `hande_tcp` sits above the OMTS window and points down. Joint transits (home, pre-grasp, and place) request Pilz PTP and fall back to OMPL if that pipeline rejects the goal.
+Home is the SRDF `ready` pose with `shoulder_pan_joint` set to `-2.8173` instead of ready's `-0.1597`. That is a 2.658 rad (152°) turn, not π: enough to face the window, then back about 28° so `hande_tcp` is centred above it and points down. Joint transits (home, pre-grasp, and place) request Pilz PTP and fall back to OMPL if that pipeline rejects the goal.
 
 The loop then plans a new grasp for the billet at its new pose. Feasible IK variants are ranked by weighted joint distance from the current arm, after wrapping each joint onto the equivalent angle closest to where it is now. `grasp_quality` only breaks ties. Variants that would flip `wrist_2` by more than π/2, or swing the base more than π/2 away from home, are dropped. Up to three distinct poses are tried if a pre-grasp motion fails. If none of Intrinsic's IK solutions pass, the driver calls `/compute_ik` on the pre-grasp pose seeded with the current joints.
 
@@ -217,7 +223,7 @@ The standalone node only compiles the SDK-free sources. A commit that changes th
 
 - **Port 8765 is in use.** Stop the other process or change the host mapping in `compose.yaml`.
 - **The robot has no meshes.** Wait for the first asset fetch (tens of megabytes). Confirm the bridge is the Foxglove WebSocket endpoint, not a raw rosbridge URL. The subprotocol is `foxglove.sdk.v1`.
-- **Offline playback has no meshes.** Toggle the URDF layer to `/robot_description_web`.
+- **Offline playback has no meshes.** Import [`foxglove_layouts/intrinsic_moveit_grasp_demo_playback.json`](foxglove_layouts/intrinsic_moveit_grasp_demo_playback.json). It enables the `/robot_description_web` URDF layer and hides the live `/robot_description` layer.
 - **The arm pauses in `RECOVER`.** A sampled place pose was unreachable. The driver detaches, returns to the work-facing home pose, and samples a new billet pose. `/demo/failures` counts these events.
 - **Logs.** `docker compose logs -f`.
 

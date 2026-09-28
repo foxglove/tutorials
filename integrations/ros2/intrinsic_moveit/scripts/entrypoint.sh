@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -eo pipefail
 
+# A restart keeps the container filesystem. Drop the previous ready file
+# before sourcing ROS so health cannot pass during that delay.
+rm -f /tmp/intrinsic_demo_ready
 source /opt/ros/jazzy/setup.bash
 source /ws/install/setup.bash
 mkdir -p /recordings
@@ -10,9 +13,9 @@ if [[ "${1:-}" == "ros2" && "${2:-}" == "launch" && "${3:-}" == "intrinsic_foxgl
   child=0
   forward() {
     if [[ "${child}" -ne 0 ]]; then
-      # The launch process is a session leader. Signal the whole group so
-      # rosbag2 sees SIGINT and writes metadata.yaml plus the MCAP summary.
-      kill -INT -- "-${child}" 2>/dev/null || kill -INT "${child}" 2>/dev/null || true
+      # Signal only the launch process. It forwards one SIGINT to its children.
+      # A group signal would deliver a second SIGINT and make rosbag2 exit 2.
+      kill -INT "${child}" 2>/dev/null || true
     fi
   }
   trap forward INT TERM

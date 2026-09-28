@@ -507,25 +507,19 @@
         "foxglove_bridge": {
           "visible": false
         },
-        "plugins.simple_controller_manager": {
+        "move_group.moveit.moveit.plugins.simple_controller_manager": {
           "visible": false
         },
-        "move_group.plugins.simple_controller_manager": {
+        "move_group.moveit.moveit.ros.trajectory_execution_manager": {
           "visible": false
         },
-        "trajectory_execution_manager": {
+        "move_group.moveit.moveit.ros.move_group.clear_octomap_service": {
           "visible": false
         },
-        "move_group.trajectory_execution_manager": {
+        "move_group.moveit.moveit.ros.move_group.cartesian_path_service_capability": {
           "visible": false
         },
-        "move_group.clear_octomap_service": {
-          "visible": false
-        },
-        "cartesian_path_service_capability": {
-          "visible": false
-        },
-        "move_group.cartesian_path_service_capability": {
+        "ur_manipulator_controller": {
           "visible": false
         }
       },

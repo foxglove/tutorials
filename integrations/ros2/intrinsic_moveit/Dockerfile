@@ -1,11 +1,10 @@
 # syntax=docker/dockerfile:1
 ARG ROS_DISTRO=jazzy
-# Pin the base image that this tutorial was tested against. Jazzy apt snapshots
-# on snapshots.ros.org do not include the September 2026 package set, so the
-# ROS packages themselves still resolve from packages.ros.org.
+# Pin the base image that this tutorial was tested against.
 ARG ROS_BASE_DIGEST=sha256:c3706ef0a0aa45413c07803cf433602f543b22e45b4855f6fca955c2d8ecc4e8
 FROM ros:${ROS_DISTRO}-ros-base@${ROS_BASE_DIGEST}
 ARG ROS_DISTRO
+ARG ROS_APT_SNAPSHOT=2026-09-11
 ARG INTRINSIC_MOVEIT_REPO=https://github.com/intrinsic-ai/intrinsic-moveit.git
 ARG INTRINSIC_MOVEIT_COMMIT=c5e3290aa0f0e64c2d106a2fb4eb10cb52592205
 ENV DEBIAN_FRONTEND=noninteractive \
@@ -14,9 +13,18 @@ ENV DEBIAN_FRONTEND=noninteractive \
     INTRINSIC_MOVEIT_COMMIT=${INTRINSIC_MOVEIT_COMMIT} \
     ROS_AUTOMATIC_DISCOVERY_RANGE=LOCALHOST
 
+# ROS packages come from the Jazzy snapshot. The Ubuntu archive is left unpinned.
+# The snapshot key (ROS Snapshot builder) expires 2027-06-01.
 # ur-description Depends on rviz2. Extract the share files so the URDF resolves
 # without installing RViz, Qt, or LLVM.
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN curl -fsSL "https://keyserver.ubuntu.com/pks/lookup?op=get&search=0x4B63CF8FDE49746E98FA01DDAD19BAB3CBF125EA" \
+      | gpg --dearmor -o /usr/share/keyrings/ros-snapshots.gpg \
+ && gpg --show-keys /usr/share/keyrings/ros-snapshots.gpg \
+      | grep -q 4B63CF8FDE49746E98FA01DDAD19BAB3CBF125EA \
+ && rm -f /etc/apt/sources.list.d/ros2.sources /etc/apt/sources.list.d/ros2.list \
+ && echo "deb [signed-by=/usr/share/keyrings/ros-snapshots.gpg] http://snapshots.ros.org/${ROS_DISTRO}/${ROS_APT_SNAPSHOT}/ubuntu noble main" \
+      > /etc/apt/sources.list.d/ros2-snapshot.list \
+ && apt-get update && apt-get install -y --no-install-recommends \
       git \
       build-essential \
       python3-numpy \

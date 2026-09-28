@@ -6,7 +6,7 @@ import traceback
 import numpy as np
 import rclpy
 from builtin_interfaces.msg import Duration
-from control_msgs.action import GripperCommand
+from control_msgs.action import FollowJointTrajectory, GripperCommand
 from geometry_msgs.msg import PoseArray, PoseStamped, TransformStamped
 from moveit_msgs.action import ExecuteTrajectory
 from moveit_msgs.msg import (
@@ -180,6 +180,11 @@ class GraspDemoDriver(Node):
             self, ExecuteTrajectory, '/execute_trajectory', callback_group=self._cb)
         self.gripper = ActionClient(
             self, GripperCommand, '/hand_controller/gripper_cmd', callback_group=self._cb)
+        # move_group's /execute_trajectory server is up before this controller is.
+        self.arm_follow = ActionClient(
+            self, FollowJointTrajectory,
+            '/ur_manipulator_controller/follow_joint_trajectory',
+            callback_group=self._cb)
 
         self._publish_counters()
         self._publish_scene()
@@ -400,6 +405,7 @@ class GraspDemoDriver(Node):
         actions = [
             (self.execute, '/execute_trajectory'),
             (self.gripper, '/hand_controller/gripper_cmd'),
+            (self.arm_follow, '/ur_manipulator_controller/follow_joint_trajectory'),
         ]
         deadline = time.monotonic() + timeout
         next_log = 0.0
@@ -642,13 +648,11 @@ class GraspDemoDriver(Node):
 
     def _execute_cartesian(self, transform, avoid):
         response = self._cartesian_to(transform, avoid)
-        if (response.fraction < 0.95 or not response.solution.joint_trajectory.points) and avoid:
-            self.get_logger().warn('cartesian fraction low, retrying with collisions ignored')
-            response = self._cartesian_to(transform, False)
         if response.fraction >= 0.95 and response.solution.joint_trajectory.points:
             self._execute_trajectory(response.solution)
             return
-        raise RuntimeError(f'cartesian path fraction {response.fraction:.3f}')
+        raise RuntimeError(
+            f'cartesian path fraction {response.fraction:.3f} avoid={avoid}')
 
     def _fk_pose(self, joint_map):
         request = GetPositionFK.Request()
@@ -1111,16 +1115,34 @@ def main():
     node = GraspDemoDriver()
     executor = MultiThreadedExecutor()
     executor.add_node(node)
-    spinner = threading.Thread(target=executor.spin, daemon=True)
+
+    def _spin():
+        # SIGINT shuts the context down under this thread. That raises RCLError
+        # from the wait set; the process should still exit quietly.
+        try:
+            executor.spin()
+        except (KeyboardInterrupt, Exception):
+            pass
+
+    spinner = threading.Thread(target=_spin, daemon=True)
     spinner.start()
     try:
         node.run()
     except KeyboardInterrupt:
         pass
     finally:
-        executor.shutdown()
-        node.destroy_node()
-        rclpy.shutdown()
+        # SIGINT already shuts the rcl context down. A second shutdown raises
+        # RCLError, and a second interrupt raises KeyboardInterrupt.
+        for cleanup in (executor.shutdown, node.destroy_node):
+            try:
+                cleanup()
+            except (KeyboardInterrupt, Exception):
+                pass
+        try:
+            if rclpy.ok():
+                rclpy.shutdown()
+        except (KeyboardInterrupt, Exception):
+            pass
 
 
 if __name__ == '__main__':
