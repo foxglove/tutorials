@@ -1,0 +1,4 @@
+recordings/
+media/
+*.md
+**/__pycache__
