@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import math
 import os
 import sys
 import time
@@ -30,6 +31,8 @@ REQUIRED_PHASES = [
     'RELEASE',
     'PARK',
 ]
+MIN_ARM_SPAN = 0.3
+MIN_MOVED_JOINTS = 2
 
 
 def main():
@@ -65,19 +68,33 @@ def main():
             spans[name] = max(values) - min(values)
         else:
             spans[name] = 0.0
-    moved = [name for name in ARM_JOINTS if spans[name] > 0.5]
+    moved = [name for name in ARM_JOINTS if spans[name] > MIN_ARM_SPAN]
     print('joint spans', {name: round(spans[name], 4) for name in spans})
     print('statuses', statuses)
-    if len(moved) < 3:
-        raise SystemExit(f'FAIL only {len(moved)} arm joints moved more than 0.5 rad')
+    if len(moved) < MIN_MOVED_JOINTS:
+        raise SystemExit(
+            f'FAIL only {len(moved)} arm joints moved more than {MIN_ARM_SPAN} rad')
     if spans['hande_left_finger_joint'] <= 0.005:
         raise SystemExit('FAIL gripper did not move')
+    if spans['shoulder_pan_joint'] >= 1.5:
+        raise SystemExit(
+            f'FAIL shoulder_pan span {spans["shoulder_pan_joint"]:.3f} rad >= 1.5')
+    if spans['wrist_2_joint'] >= 0.8:
+        raise SystemExit(
+            f'FAIL wrist_2 span {spans["wrist_2_joint"]:.3f} rad >= 0.8')
+    if spans['wrist_3_joint'] >= math.pi:
+        raise SystemExit(
+            f'FAIL wrist_3 span {spans["wrist_3_joint"]:.3f} rad >= pi')
     missing = [phase for phase in REQUIRED_PHASES if not any(phase in text for text in statuses)]
     if missing:
         raise SystemExit(f'FAIL status missing {missing}')
     print(
         f'PASS motion arm_joints={len(moved)} '
-        f'gripper_span={spans["hande_left_finger_joint"]:.4f} phases={len(REQUIRED_PHASES)}')
+        f'gripper_span={spans["hande_left_finger_joint"]:.4f} '
+        f'pan_span={spans["shoulder_pan_joint"]:.4f} '
+        f'wrist2_span={spans["wrist_2_joint"]:.4f} '
+        f'wrist3_span={spans["wrist_3_joint"]:.4f} '
+        f'phases={len(REQUIRED_PHASES)}')
     node.destroy_node()
     rclpy.shutdown()
 

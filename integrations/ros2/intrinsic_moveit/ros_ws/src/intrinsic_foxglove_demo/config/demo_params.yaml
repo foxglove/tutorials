@@ -20,8 +20,9 @@ grasp_demo_driver:
     retract_dist_m: 0.1
     surfaces: [0, 1, 2, 3, 4, 5]
     num_rotations: 4
-    ready_joints:
-      shoulder_pan_joint: -0.1597
+    # SRDF ready, rotated pi about the base so hande_tcp faces the return-shift window.
+    home_joints:
+      shoulder_pan_joint: -2.8173
       shoulder_lift_joint: -1.3542
       elbow_joint: -1.6648
       wrist_1_joint: -1.6933

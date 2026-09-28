@@ -6,7 +6,7 @@ import traceback
 import numpy as np
 import rclpy
 from builtin_interfaces.msg import Duration
-from control_msgs.action import FollowJointTrajectory, GripperCommand
+from control_msgs.action import GripperCommand
 from geometry_msgs.msg import PoseArray, PoseStamped, TransformStamped
 from moveit_msgs.action import ExecuteTrajectory
 from moveit_msgs.msg import (
@@ -17,15 +17,12 @@ from moveit_msgs.msg import (
     JointConstraint,
     MoveItErrorCodes,
     PlanningScene,
-    PlanningSceneComponents,
     RobotState,
-    RobotTrajectory,
 )
 from moveit_msgs.srv import (
     ApplyPlanningScene,
     GetCartesianPath,
     GetMotionPlan,
-    GetPlanningScene,
     GetPositionFK,
     GetPositionIK,
 )
@@ -35,12 +32,12 @@ from rclpy.action import ActionClient
 from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.executors import MultiThreadedExecutor
 from rclpy.node import Node
+from rclpy.parameter import Parameter
 from rclpy.qos import DurabilityPolicy, QoSProfile, ReliabilityPolicy
 from sensor_msgs.msg import JointState
 from shape_msgs.msg import SolidPrimitive
 from std_msgs.msg import Float64, Int32, String
-from tf2_ros import TransformBroadcaster
-from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
+from tf2_ros import Buffer, TransformBroadcaster, TransformListener
 from visualization_msgs.msg import MarkerArray
 
 from intrinsic_foxglove_demo.geometry import (
@@ -66,19 +63,21 @@ ARM_JOINTS = [
     'wrist_2_joint',
     'wrist_3_joint',
 ]
-HOME_JOINTS = {
-    'shoulder_pan_joint': 0.0,
-    'shoulder_lift_joint': -1.5708,
-    'elbow_joint': -1.5708,
-    'wrist_1_joint': -1.5708,
-    'wrist_2_joint': 1.5708,
-    'wrist_3_joint': 0.0,
+JOINT_WEIGHTS = {
+    'shoulder_pan_joint': 1.0,
+    'shoulder_lift_joint': 1.0,
+    'elbow_joint': 1.0,
+    'wrist_1_joint': 0.7,
+    'wrist_2_joint': 2.0,
+    'wrist_3_joint': 0.5,
 }
+JOINT_LIMIT = 2.0 * math.pi
 TOUCH_LINKS = [
     'hande_hande_base_link',
     'hande_hande_finger_link_l',
     'hande_hande_finger_link_r',
 ]
+READY_FILE = '/tmp/intrinsic_demo_ready'
 
 
 def _duration(seconds):
@@ -86,6 +85,30 @@ def _duration(seconds):
     duration.sec = int(seconds)
     duration.nanosec = int(round((seconds - duration.sec) * 1e9))
     return duration
+
+
+def closest_equivalent(target, current, limit=JOINT_LIMIT):
+    """Return target + 2πk inside ±limit that is closest to current."""
+    two_pi = 2.0 * math.pi
+    best = None
+    best_dist = None
+    base_k = int(round((current - target) / two_pi))
+    for turn in range(base_k - 2, base_k + 3):
+        value = target + turn * two_pi
+        if value < -limit - 1e-6 or value > limit + 1e-6:
+            continue
+        dist = abs(value - current)
+        if best is None or dist < best_dist:
+            best = value
+            best_dist = dist
+    if best is None:
+        delta = math.atan2(math.sin(target - current), math.cos(target - current))
+        best = current + delta
+        if best > limit:
+            best -= two_pi
+        elif best < -limit:
+            best += two_pi
+    return best
 
 
 class GraspDemoDriver(Node):
@@ -101,6 +124,7 @@ class GraspDemoDriver(Node):
         self._T_tcp_obj = np.eye(4)
         self._pending_pose = None
         self._ghost_pose = None
+        self._place_target = None
         self._displays = []
         self._tries = []
         self._selected = None
@@ -136,14 +160,14 @@ class GraspDemoDriver(Node):
             String, '/robot_description', self._on_robot_description, latched,
             callback_group=self._cb)
 
+        self.tf_buffer = Buffer()
+        self.tf_listener = TransformListener(self.tf_buffer, self)
         self.tf_broadcaster = TransformBroadcaster(self)
         self.create_timer(1.0 / 30.0, self._publish_tf, callback_group=self._cb)
         self.create_timer(1.0, self._publish_scene, callback_group=self._cb)
 
         self.apply_scene = self.create_client(
             ApplyPlanningScene, '/apply_planning_scene', callback_group=self._cb)
-        self.get_scene = self.create_client(
-            GetPlanningScene, '/get_planning_scene', callback_group=self._cb)
         self.plan_grasps = self.create_client(
             PlanGrasps, '/grasp_planning/plan_grasps', callback_group=self._cb)
         self.motion_plan = self.create_client(
@@ -156,57 +180,28 @@ class GraspDemoDriver(Node):
             self, ExecuteTrajectory, '/execute_trajectory', callback_group=self._cb)
         self.gripper = ActionClient(
             self, GripperCommand, '/hand_controller/gripper_cmd', callback_group=self._cb)
-        self.follow_joints = ActionClient(
-            self, FollowJointTrajectory, '/ur_manipulator_controller/follow_joint_trajectory',
-            callback_group=self._cb)
 
         self._publish_counters()
         self._publish_scene()
 
     def _declare_parameters(self):
-        self.declare_parameter('object_id', 'raw_stock')
-        self.declare_parameter('object_label', 'raw_stock_2x3x5')
-        self.declare_parameter('object_dims', [0.0762, 0.127, 0.0508])
-        self.declare_parameter('object_base_quat_xyzw', [0.70710678, 0.0, 0.70710678, 0.0])
-        self.declare_parameter('table_size', [1.2, 1.2, 0.04])
-        self.declare_parameter('table_center', [0.3, 0.0, -0.021])
-        self.declare_parameter('return_shift_center', [0.45, 0.0])
-        self.declare_parameter('return_shift_bounds_xy', [0.1, 0.1])
-        self.declare_parameter('return_shift_bounds_yaw_deg', 40.0)
-        self.declare_parameter('initial_object_xy_yaw_deg', [0.45, 0.1, 30.0])
-        self.declare_parameter('min_place_distance', 0.06)
-        self.declare_parameter('random_seed', 7)
-        self.declare_parameter('group_name', 'ur_manipulator')
-        self.declare_parameter('end_effector_group', 'hand')
-        self.declare_parameter('tool_frame', 'hande_tcp')
-        self.declare_parameter('planning_timeout_sec', 10.0)
-        self.declare_parameter('gripper_motion_duration_sec', 0.75)
-        self.declare_parameter('retract_dist_m', 0.1)
-        self.declare_parameter('surfaces', [0, 1, 2, 3, 4, 5])
-        self.declare_parameter('num_rotations', 4)
-        defaults = {
-            'shoulder_pan_joint': -0.1597,
-            'shoulder_lift_joint': -1.3542,
-            'elbow_joint': -1.6648,
-            'wrist_1_joint': -1.6933,
-            'wrist_2_joint': 1.571,
-            'wrist_3_joint': 1.411,
-        }
-        for name, value in defaults.items():
-            self.declare_parameter(f'ready_joints.{name}', value)
-        self.declare_parameter('transit_velocity_scaling', 0.5)
-        self.declare_parameter('cartesian_velocity_scaling', 0.2)
-        self.declare_parameter('gripper_open', -0.001)
-        self.declare_parameter('gripper_closed', 0.025)
-        self.declare_parameter('gripper_nominal_stroke', 0.050)
-        self.declare_parameter('gripper_max_opening', 0.052)
-        self.declare_parameter('cycles', 0)
-        self.declare_parameter('pause_between_phases_sec', 0.4)
-        self.declare_parameter('motion_plan_service', '/plan_kinematic_path')
-        self.declare_parameter(
-            'robot_description_web_base',
-            'https://raw.githubusercontent.com/intrinsic-ai/intrinsic-moveit/{commit}/robot_hardware_description/')
-        self.declare_parameter('intrinsic_moveit_commit', '')
+        for name in ('object_id', 'object_label', 'group_name', 'end_effector_group',
+                     'tool_frame', 'motion_plan_service', 'robot_description_web_base',
+                     'intrinsic_moveit_commit'):
+            self.declare_parameter(name, Parameter.Type.STRING)
+        for name in ('return_shift_bounds_yaw_deg', 'min_place_distance', 'planning_timeout_sec',
+                     'gripper_motion_duration_sec', 'retract_dist_m', 'transit_velocity_scaling',
+                     'cartesian_velocity_scaling', 'gripper_open', 'gripper_closed',
+                     'gripper_nominal_stroke', 'gripper_max_opening', 'pause_between_phases_sec'):
+            self.declare_parameter(name, Parameter.Type.DOUBLE)
+        for name in ('object_dims', 'object_base_quat_xyzw', 'table_size', 'table_center',
+                     'return_shift_center', 'return_shift_bounds_xy', 'initial_object_xy_yaw_deg'):
+            self.declare_parameter(name, Parameter.Type.DOUBLE_ARRAY)
+        for name in ('random_seed', 'num_rotations', 'cycles'):
+            self.declare_parameter(name, Parameter.Type.INTEGER)
+        self.declare_parameter('surfaces', Parameter.Type.INTEGER_ARRAY)
+        for name in ARM_JOINTS:
+            self.declare_parameter(f'home_joints.{name}', Parameter.Type.DOUBLE)
 
     def _load_parameters(self):
         def doubles(name):
@@ -235,8 +230,8 @@ class GraspDemoDriver(Node):
         self.retract_dist = float(self.get_parameter('retract_dist_m').value)
         self.surfaces = [int(value) for value in self.get_parameter('surfaces').value]
         self.num_rotations = int(self.get_parameter('num_rotations').value)
-        self.ready_joints = {
-            name: float(self.get_parameter(f'ready_joints.{name}').value) for name in ARM_JOINTS
+        self.home_joints = {
+            name: float(self.get_parameter(f'home_joints.{name}').value) for name in ARM_JOINTS
         }
         self.transit_scaling = float(self.get_parameter('transit_velocity_scaling').value)
         self.cartesian_scaling = float(self.get_parameter('cartesian_velocity_scaling').value)
@@ -279,19 +274,32 @@ class GraspDemoDriver(Node):
         state.joint_state.position = [float(joints[name]) for name in state.joint_state.name]
         return state
 
+    def _world_tcp(self):
+        stamped = self.tf_buffer.lookup_transform('world', self.tool_frame, rclpy.time.Time())
+        translation_msg = stamped.transform.translation
+        rotation_msg = stamped.transform.rotation
+        return matrix_from_xyz_quat(
+            (translation_msg.x, translation_msg.y, translation_msg.z),
+            (rotation_msg.x, rotation_msg.y, rotation_msg.z, rotation_msg.w),
+        )
+
     def _publish_tf(self):
         with self._lock:
             if not self._tf_enabled:
                 return
-            if self._attached:
-                parent = self.tool_frame
-                transform = self._T_tcp_obj
-            else:
-                parent = 'world'
-                transform = self._T_world_obj
+            attached = self._attached
+            world_obj = self._T_world_obj
+            tcp_obj = self._T_tcp_obj
+        if attached:
+            try:
+                transform = self._world_tcp() @ tcp_obj
+            except Exception:
+                return
+        else:
+            transform = world_obj
         stamped = TransformStamped()
         stamped.header.stamp = self.get_clock().now().to_msg()
-        stamped.header.frame_id = parent
+        stamped.header.frame_id = 'world'
         stamped.child_frame_id = self.object_id
         stamped.transform = matrix_to_transform(transform)
         self.tf_broadcaster.sendTransform(stamped)
@@ -383,7 +391,6 @@ class GraspDemoDriver(Node):
     def _wait_interfaces(self, timeout=180.0):
         services = [
             (self.apply_scene, '/apply_planning_scene'),
-            (self.get_scene, '/get_planning_scene'),
             (self.plan_grasps, '/grasp_planning/plan_grasps'),
             (self.motion_plan, self.motion_plan_service),
             (self.cartesian, '/compute_cartesian_path'),
@@ -393,7 +400,6 @@ class GraspDemoDriver(Node):
         actions = [
             (self.execute, '/execute_trajectory'),
             (self.gripper, '/hand_controller/gripper_cmd'),
-            (self.follow_joints, '/ur_manipulator_controller/follow_joint_trajectory'),
         ]
         deadline = time.monotonic() + timeout
         next_log = 0.0
@@ -465,14 +471,6 @@ class GraspDemoDriver(Node):
         scene.world.collision_objects.append(obj)
         self._apply(scene)
 
-    def _world_object_present(self):
-        request = GetPlanningScene.Request()
-        request.components.components = PlanningSceneComponents.WORLD_OBJECT_GEOMETRY
-        response = self._call(self.get_scene, request, 10.0)
-        if response is None:
-            return False
-        return any(obj.id == self.object_id for obj in response.scene.world.collision_objects)
-
     def _attach(self):
         attached = AttachedCollisionObject()
         attached.link_name = self.tool_frame
@@ -512,19 +510,41 @@ class GraspDemoDriver(Node):
         state.position = [float(joint_map[name]) for name in ARM_JOINTS]
         return state
 
+    def _wrap_positions(self, positions, current):
+        if any(name not in positions for name in ARM_JOINTS):
+            return None
+        return {
+            name: closest_equivalent(float(positions[name]), float(current.get(name, positions[name])))
+            for name in ARM_JOINTS
+        }
+
+    def _joint_score(self, wrapped, current):
+        return sum(
+            JOINT_WEIGHTS[name] * abs(wrapped[name] - float(current.get(name, wrapped[name])))
+            for name in ARM_JOINTS
+        )
+
+    def _ik_acceptable(self, wrapped, current):
+        wrist_delta = abs(wrapped['wrist_2_joint'] - float(current['wrist_2_joint']))
+        pan_delta = abs(wrapped['shoulder_pan_joint'] - self.home_joints['shoulder_pan_joint'])
+        return wrist_delta <= math.pi / 2.0 and pan_delta <= math.pi / 2.0
+
     def _plan_joint_goal(self, joint_state):
         last_code = None
-        for use_start in (True, False):
+        for pipeline_id, planner_id in (
+            ('pilz_industrial_motion_planner', 'PTP'),
+            ('ompl', ''),
+        ):
             request = GetMotionPlan.Request()
             motion = request.motion_plan_request
             motion.group_name = self.group_name
-            motion.pipeline_id = 'ompl'
+            motion.pipeline_id = pipeline_id
+            motion.planner_id = planner_id
             motion.num_planning_attempts = 5
             motion.allowed_planning_time = 5.0
             motion.max_velocity_scaling_factor = self.transit_scaling
             motion.max_acceleration_scaling_factor = self.transit_scaling
-            if use_start and self._joint_snapshot():
-                motion.start_state = self._robot_state()
+            motion.start_state = self._robot_state()
             constraints = Constraints()
             for name, position in zip(joint_state.name, joint_state.position):
                 constraints.joint_constraints.append(JointConstraint(
@@ -535,11 +555,16 @@ class GraspDemoDriver(Node):
                     weight=1.0,
                 ))
             motion.goal_constraints.append(constraints)
-            response = self._call(self.motion_plan, request, 30.0)
+            try:
+                response = self._call(self.motion_plan, request, 30.0)
+            except Exception as exc:  # noqa: BLE001
+                self.get_logger().warn(f'{pipeline_id} {planner_id or "default"} plan call failed: {exc}')
+                continue
             code = response.motion_plan_response.error_code.val
             points = response.motion_plan_response.trajectory.joint_trajectory.points
             self.get_logger().info(
-                f'joint plan code={code} points={len(points)} explicit_start={use_start}')
+                f'joint plan pipeline={pipeline_id} planner={planner_id or "default"} '
+                f'code={code} points={len(points)}')
             if code == MoveItErrorCodes.SUCCESS and points:
                 return response.motion_plan_response.trajectory
             last_code = code
@@ -583,93 +608,47 @@ class GraspDemoDriver(Node):
         result = self._send_goal(self.execute, goal, timeout)
         code = result.error_code.val if result is not None else None
         after = self._joint_snapshot()
-        deltas = {
-            name: round(after.get(name, 0.0) - before.get(name, 0.0), 3) for name in ARM_JOINTS
-        }
-        self.get_logger().info(f'execute code={code} arm_delta={deltas}')
+        deltas = {}
+        for name in ARM_JOINTS:
+            deltas[name] = round(after.get(name, 0.0) - before.get(name, 0.0), 3)
+        max_abs = max(abs(value) for value in deltas.values())
+        self.get_logger().info(f'execute code={code} arm_delta={deltas} max_abs={max_abs:.3f}')
         if code != MoveItErrorCodes.SUCCESS:
             raise RuntimeError(f'execute_trajectory failed ({code})')
         return result
 
-    def _move_joints(self, joint_map, allow_direct=True):
-        try:
-            trajectory = self._plan_joint_goal(self._joint_state_from_map(joint_map))
-            self._execute_trajectory(trajectory)
-            return
-        except Exception as exc:  # noqa: BLE001
-            self.get_logger().warn(f'planned joint move failed: {exc}')
-            if not allow_direct:
-                raise
-        goal = FollowJointTrajectory.Goal()
-        goal.trajectory.joint_names = list(ARM_JOINTS)
-        point = JointTrajectoryPoint()
-        point.positions = [float(joint_map[name]) for name in ARM_JOINTS]
-        point.time_from_start = _duration(3.0)
-        goal.trajectory.points.append(point)
-        result = self._send_goal(self.follow_joints, goal, 20.0)
-        error_code = getattr(getattr(result, 'error_code', None), 'val', 0)
-        self.get_logger().info(f'direct joint trajectory error_code={error_code}')
-        if error_code not in (0, MoveItErrorCodes.SUCCESS):
-            raise RuntimeError(f'follow_joint_trajectory failed ({error_code})')
+    def _move_joints(self, joint_map):
+        self._execute_trajectory(self._plan_joint_goal(self._joint_state_from_map(joint_map)))
 
     def _cartesian_to(self, transform, avoid):
         pose = matrix_to_pose(transform)
-        last = None
-        for use_start in (True, False):
-            request = GetCartesianPath.Request()
-            request.header.frame_id = 'world'
-            request.header.stamp = self.get_clock().now().to_msg()
-            request.group_name = self.group_name
-            request.link_name = self.tool_frame
-            request.waypoints.append(pose)
-            request.max_step = 0.005
-            request.avoid_collisions = bool(avoid)
-            request.max_velocity_scaling_factor = self.cartesian_scaling
-            request.max_acceleration_scaling_factor = self.cartesian_scaling
-            if use_start and self._joint_snapshot():
-                request.start_state = self._robot_state()
-            response = self._call(self.cartesian, request, 30.0)
-            points = len(response.solution.joint_trajectory.points)
-            self.get_logger().info(
-                f'cartesian avoid={avoid} fraction={response.fraction:.3f} '
-                f'code={response.error_code.val} points={points} explicit_start={use_start}')
-            last = response
-            if response.fraction >= 0.95 and points > 0:
-                return response
-        return last
+        request = GetCartesianPath.Request()
+        request.header.frame_id = 'world'
+        request.header.stamp = self.get_clock().now().to_msg()
+        request.group_name = self.group_name
+        request.link_name = self.tool_frame
+        request.waypoints.append(pose)
+        request.max_step = 0.005
+        request.avoid_collisions = bool(avoid)
+        request.max_velocity_scaling_factor = self.cartesian_scaling
+        request.max_acceleration_scaling_factor = self.cartesian_scaling
+        request.start_state = self._robot_state()
+        response = self._call(self.cartesian, request, 30.0)
+        points = len(response.solution.joint_trajectory.points)
+        self.get_logger().info(
+            f'cartesian avoid={avoid} fraction={response.fraction:.3f} '
+            f'code={response.error_code.val} points={points}')
+        return response
 
-    def _execute_cartesian(self, transform, avoid, fallback_joints=None):
+    def _execute_cartesian(self, transform, avoid):
         response = self._cartesian_to(transform, avoid)
-        if response.fraction < 0.95 or not response.solution.joint_trajectory.points:
-            if avoid:
-                self.get_logger().warn('cartesian fraction low, retrying with collisions ignored')
-                response = self._cartesian_to(transform, False)
+        if (response.fraction < 0.95 or not response.solution.joint_trajectory.points) and avoid:
+            self.get_logger().warn('cartesian fraction low, retrying with collisions ignored')
+            response = self._cartesian_to(transform, False)
         if response.fraction >= 0.95 and response.solution.joint_trajectory.points:
             self._execute_trajectory(response.solution)
             return
-        if fallback_joints is None:
-            raise RuntimeError(f'cartesian path fraction {response.fraction:.3f}')
-        self.get_logger().warn('cartesian path incomplete, interpolating joint goal')
-        self._execute_trajectory(self._interpolate(fallback_joints))
-
-    def _interpolate(self, target_state, duration=2.0, samples=20):
-        current = self._joint_snapshot()
-        names = list(target_state.name)
-        target = [float(value) for value in target_state.position]
-        start = [float(current[name]) for name in names]
-        trajectory = JointTrajectory()
-        trajectory.joint_names = names
-        for index in range(samples):
-            alpha = float(index + 1) / float(samples)
-            point = JointTrajectoryPoint()
-            point.positions = [
-                start[i] + alpha * (target[i] - start[i]) for i in range(len(names))
-            ]
-            point.time_from_start = _duration(duration * alpha)
-            trajectory.points.append(point)
-        robot_trajectory = RobotTrajectory()
-        robot_trajectory.joint_trajectory = trajectory
-        return robot_trajectory
+        raise RuntimeError(f'cartesian path fraction {response.fraction:.3f}')
 
     def _fk_pose(self, joint_map):
         request = GetPositionFK.Request()
@@ -682,25 +661,61 @@ class GraspDemoDriver(Node):
             raise RuntimeError(f'compute_fk failed ({response.error_code.val})')
         return response.pose_stamped[0].pose
 
-    def _validate_ready(self):
-        pose = self._fk_pose(self.ready_joints)
+    def _log_home_fk(self):
+        pose = self._fk_pose(self.home_joints)
         tool_z = quat_to_mat((
             pose.orientation.x, pose.orientation.y, pose.orientation.z, pose.orientation.w))[:, 2]
         self.get_logger().info(
-            f'ready hande_tcp xyz=({pose.position.x:.3f}, {pose.position.y:.3f}, {pose.position.z:.3f}) '
+            f'home hande_tcp xyz=({pose.position.x:.3f}, {pose.position.y:.3f}, {pose.position.z:.3f}) '
             f'tool_z={float(tool_z[2]):.3f}')
-        if float(tool_z[2]) > -0.3 or pose.position.z < 0.05:
-            self.get_logger().warn('ready pose failed the TCP check, using SRDF home')
-            self.ready_joints = dict(HOME_JOINTS)
-            pose = self._fk_pose(self.ready_joints)
-            self.get_logger().info(
-                f'home hande_tcp xyz=({pose.position.x:.3f}, {pose.position.y:.3f}, {pose.position.z:.3f})')
 
     def _publish_candidates(self, displays):
         self.candidate_pub.publish(build_candidate_markers(
             self.get_clock().now().to_msg(), self.object_id, displays))
 
+    def _annotate_variant(self, item, current):
+        positions = {
+            name: float(pos)
+            for name, pos in zip(item['pre_ik'].name, item['pre_ik'].position)
+        }
+        wrapped = self._wrap_positions(positions, current)
+        item['pre_joints'] = wrapped
+        if wrapped is None:
+            item['score'] = float('inf')
+            item['accepted'] = False
+            return
+        item['score'] = self._joint_score(wrapped, current)
+        item['accepted'] = item['feasible'] and self._ik_acceptable(wrapped, current)
+
+    def _ik_fallback(self, groups, current):
+        found = {}
+        seeds = []
+        for key, items in groups.items():
+            feasible = [item for item in items if item['feasible']]
+            if feasible:
+                seeds.append(max(feasible, key=lambda item: (item['quality'], -item['approach_z'])))
+        seeds.sort(key=lambda item: (-item['quality'], item['approach_z']))
+        for seed in seeds:
+            world_pre = self._T_world_obj @ pose_to_matrix(seed['pre_pose'].pose)
+            try:
+                joints = self._ik_pose(world_pre, reject_far=True)
+            except Exception as exc:  # noqa: BLE001
+                self.get_logger().warn(f'pregrasp IK fallback failed: {exc}')
+                continue
+            wrapped = {name: float(pos) for name, pos in zip(joints.name, joints.position)}
+            chosen = dict(seed)
+            chosen['pre_joints'] = wrapped
+            chosen['score'] = self._joint_score(wrapped, current)
+            chosen['accepted'] = True
+            found[seed['key']] = chosen
+            self.get_logger().info(
+                f'pregrasp IK fallback score={chosen["score"]:.3f} '
+                f'pan={wrapped["shoulder_pan_joint"]:.3f}')
+            break
+        return found
+
     def _select_candidates(self, response):
+        current = self._joint_snapshot()
         rotation_world = self._T_world_obj[:3, :3]
         groups = {}
         for index, grasp in enumerate(response.grasps):
@@ -715,7 +730,6 @@ class GraspDemoDriver(Node):
                 'grasp': grasp,
                 'pre_pose': response.pre_grasp_poses[index],
                 'pre_ik': response.pregrasp_ik_solutions[index],
-                'grasp_ik': response.grasp_ik_solutions[index],
                 'width': width,
                 'feasible': width <= self.gripper_max_opening + 1e-6,
                 'approach_z': approach_z,
@@ -723,51 +737,61 @@ class GraspDemoDriver(Node):
                 'key': key,
                 'pose': pose,
             }
+            self._annotate_variant(item, current)
             groups.setdefault(key, []).append(item)
 
-        def best_feasible(items):
-            feasible = [item for item in items if item['feasible']]
-            if not feasible:
-                return None
-            return max(feasible, key=lambda item: (item['quality'], -item['approach_z']))
+        best = {}
+        for key, items in groups.items():
+            accepted = [item for item in items if item['accepted']]
+            if accepted:
+                best[key] = min(accepted, key=lambda item: (item['score'], -item['quality']))
+        if not best:
+            self.get_logger().warn('no close IK variant, seeding /compute_ik from the current state')
+            best = self._ik_fallback(groups, current)
 
-        ordered_keys = sorted(groups, key=lambda key: (
-            best_feasible(groups[key]) is None,
-            -(best_feasible(groups[key])['quality'] if best_feasible(groups[key]) else max(
-                item['quality'] for item in groups[key])),
-            min(item['approach_z'] for item in groups[key]),
-        ))
+        def sort_key(key):
+            if key in best:
+                return (0, best[key]['score'], -best[key]['quality'])
+            items = groups[key]
+            feasible = any(item['feasible'] for item in items)
+            quality = max(item['quality'] for item in items)
+            approach = min(item['approach_z'] for item in items)
+            return (1 if feasible else 2, -quality, approach)
+
+        ordered_keys = sorted(groups, key=sort_key)
         displays = []
         feasible_rank = 0
-        for index, key in enumerate(ordered_keys):
+        for key in ordered_keys:
             items = groups[key]
-            chosen = best_feasible(items) or max(items, key=lambda item: item['quality'])
+            chosen = best.get(key) or max(items, key=lambda item: item['quality'])
             pre = chosen['pre_pose'].pose.position
             grasp_position = chosen['pose'].position
+            feasible = key in best or chosen['feasible']
             displays.append({
+                'key': key,
                 'pose': chosen['pose'],
                 'pre_position': (pre.x, pre.y, pre.z),
                 'grasp_position': (grasp_position.x, grasp_position.y, grasp_position.z),
                 'width': chosen['width'],
                 'quality': chosen['quality'],
                 'n_ik': len(items),
-                'feasible': chosen['feasible'],
+                'feasible': feasible and chosen['feasible'],
                 'selected': False,
                 'rank': feasible_rank if chosen['feasible'] else 0,
             })
             if chosen['feasible']:
                 feasible_rank += 1
 
-        tries = []
-        for key in ordered_keys:
-            chosen = best_feasible(groups[key])
-            if chosen is not None:
-                tries.append(chosen)
-        tries = tries[:3]
+        tries = [best[key] for key in ordered_keys if key in best][:3]
         if displays and tries:
             selected_key = tries[0]['key']
-            for display, key in zip(displays, ordered_keys):
-                display['selected'] = key == selected_key
+            for display in displays:
+                display['selected'] = display['key'] == selected_key
+        accepted_n = sum(1 for items in groups.values() for item in items if item['accepted'])
+        self.get_logger().info(
+            f'IK variants accepted={accepted_n} distinct={len(groups)} '
+            f'selected_score={tries[0]["score"]:.3f}' if tries else
+            f'IK variants accepted={accepted_n} distinct={len(groups)} selected_score=none')
         return displays, tries
 
     def _publish_selection(self, candidate):
@@ -779,12 +803,17 @@ class GraspDemoDriver(Node):
         self.selected_pose_pub.publish(stamped)
         self.selected_msg_pub.publish(grasp)
 
+    def _mark_demo_ready(self):
+        with open(READY_FILE, 'w', encoding='utf-8') as handle:
+            handle.write('ready\n')
+
     def _phase_init(self):
         self._wait_interfaces()
         self._add_world_box('table', self.table_size, translation(*self.table_center))
-        self._validate_ready()
-        self._move_joints(self.ready_joints, allow_direct=True)
+        self._log_home_fk()
+        self._move_joints(self.home_joints)
         self._gripper(self.gripper_closed)
+        self._mark_demo_ready()
         return 'SPAWN_WORKPIECE'
 
     def _phase_spawn(self):
@@ -845,15 +874,16 @@ class GraspDemoDriver(Node):
         self.pregrasp_poses_pub.publish(pre_poses)
         self._publish_candidates(displays)
         self.get_logger().info(
-            f'{len(displays)} distinct poses, {len(tries)} feasible fallbacks, '
-            f'best q={tries[0]["quality"]:.3f} width={tries[0]["width"]*1000:.1f}mm '
-            f'approach_z={tries[0]["approach_z"]:+.2f}')
+            f'{len(displays)} distinct poses, {len(tries)} close fallbacks, '
+            f'best score={tries[0]["score"]:.3f} q={tries[0]["quality"]:.3f} '
+            f'width={tries[0]["width"]*1000:.1f}mm approach_z={tries[0]["approach_z"]:+.2f}')
         return 'SELECT_GRASP'
 
     def _phase_select(self):
         self._publish_selection(self._selected)
         self.get_logger().info(
-            f'selected grasp id={self._selected["grasp"].id} q={self._selected["quality"]:.3f}')
+            f'selected grasp id={self._selected["grasp"].id} '
+            f'score={self._selected["score"]:.3f} q={self._selected["quality"]:.3f}')
         return 'OPEN_GRIPPER'
 
     def _open_position(self, grasp):
@@ -871,18 +901,12 @@ class GraspDemoDriver(Node):
         for index, candidate in enumerate(self._tries):
             self._selected = candidate
             for display in self._displays:
-                display['selected'] = False
-            if self._displays:
-                self._displays[0]['selected'] = index == 0
-                for display in self._displays:
-                    if abs(display['quality'] - candidate['quality']) < 1e-9 and abs(
-                            display['width'] - candidate['width']) < 1e-9:
-                        display['selected'] = True
-                        break
+                display['selected'] = display['key'] == candidate['key']
             self._publish_candidates(self._displays)
             self._publish_selection(candidate)
             try:
-                self._execute_trajectory(self._plan_joint_goal(candidate['pre_ik']), timeout=60.0)
+                goal = self._joint_state_from_map(candidate['pre_joints'])
+                self._execute_trajectory(self._plan_joint_goal(goal), timeout=60.0)
                 return 'APPROACH'
             except Exception as exc:  # noqa: BLE001
                 last_error = exc
@@ -892,7 +916,7 @@ class GraspDemoDriver(Node):
     def _phase_approach(self):
         grasp_pose = pose_to_matrix(self._selected['pose'])
         world_grasp = self._T_world_obj @ grasp_pose
-        self._execute_cartesian(world_grasp, avoid=False, fallback_joints=self._selected['grasp_ik'])
+        self._execute_cartesian(world_grasp, avoid=False)
         return 'GRASP'
 
     def _phase_grasp(self):
@@ -928,7 +952,7 @@ class GraspDemoDriver(Node):
             place_tcp = target @ grasp_in_object
             pre_place = place_tcp @ translation(0.0, 0.0, -self.retract_dist)
             try:
-                joints = self._ik_pose(pre_place)
+                joints = self._ik_pose(pre_place, reject_far=True)
                 with self._lock:
                     self._ghost_pose = matrix_to_pose(target)
                     self._place_target = target
@@ -940,7 +964,8 @@ class GraspDemoDriver(Node):
                 self.get_logger().warn(f'place sample {attempt} failed: {exc}')
         raise RuntimeError(f'place planning failed: {last_error}')
 
-    def _ik_pose(self, transform):
+    def _ik_pose(self, transform, reject_far=False):
+        current = self._joint_snapshot()
         request = GetPositionIK.Request()
         request.ik_request.group_name = self.group_name
         request.ik_request.ik_link_name = self.tool_frame
@@ -953,11 +978,18 @@ class GraspDemoDriver(Node):
         response = self._call(self.ik, request, 10.0)
         if response.error_code.val != MoveItErrorCodes.SUCCESS:
             raise RuntimeError(f'compute_ik failed ({response.error_code.val})')
-        positions = dict(zip(response.solution.joint_state.name, response.solution.joint_state.position))
-        missing = [name for name in ARM_JOINTS if name not in positions]
-        if missing:
+        positions = dict(zip(
+            response.solution.joint_state.name, response.solution.joint_state.position))
+        wrapped = self._wrap_positions(positions, current)
+        if wrapped is None:
+            missing = [name for name in ARM_JOINTS if name not in positions]
             raise RuntimeError(f'IK solution missing {missing}')
-        return self._joint_state_from_map({name: positions[name] for name in ARM_JOINTS})
+        if reject_far and not self._ik_acceptable(wrapped, current):
+            raise RuntimeError(
+                'IK solution too far from the work-facing pose '
+                f'pan={wrapped["shoulder_pan_joint"]:.3f} '
+                f'wrist_2={wrapped["wrist_2_joint"]:.3f}')
+        return self._joint_state_from_map(wrapped)
 
     def _phase_descend(self):
         grasp_in_object = pose_to_matrix(self._selected['pose'])
@@ -969,8 +1001,6 @@ class GraspDemoDriver(Node):
         self._gripper(self.gripper_open)
         self._detach()
         self._add_world_box(self.object_id, self.object_dims, self._place_target)
-        if not self._world_object_present():
-            self._add_world_box(self.object_id, self.object_dims, self._place_target)
         with self._lock:
             self._T_world_obj = self._place_target
             self._attached = False
@@ -988,7 +1018,7 @@ class GraspDemoDriver(Node):
 
     def _phase_park(self):
         self._gripper(self.gripper_closed)
-        self._move_joints(self.ready_joints, allow_direct=True)
+        self._move_joints(self.home_joints)
         self.cycle += 1
         self._publish_counters()
         self.get_logger().info(f'cycle {self.cycle} complete')
@@ -1017,14 +1047,12 @@ class GraspDemoDriver(Node):
         except Exception as exc:  # noqa: BLE001
             self.get_logger().error(f'recover gripper open failed: {exc}')
         try:
-            self._move_joints(self.ready_joints, allow_direct=True)
+            self._move_joints(self.home_joints)
         except Exception as exc:  # noqa: BLE001
-            self.get_logger().error(f'recover return to ready failed: {exc}')
+            self.get_logger().error(f'recover return to home failed: {exc}')
         try:
-            current = self._joint_snapshot()
             current_xy = (float(self._T_world_obj[0, 3]), float(self._T_world_obj[1, 3]))
             self._pending_pose = self._sample_pose(current_xy, enforce_distance=False)
-            del current
         except Exception as exc:  # noqa: BLE001
             self.get_logger().error(f'recover resample failed: {exc}')
             x, y, yaw_deg = self.initial_xy_yaw
@@ -1059,6 +1087,7 @@ class GraspDemoDriver(Node):
             self._set_status(phase)
             started = time.monotonic()
             try:
+                done = phase
                 phase = handlers[phase]()
             except Exception as exc:  # noqa: BLE001
                 self.get_logger().error(f'{phase} failed: {exc}\n{traceback.format_exc()}')
@@ -1071,7 +1100,8 @@ class GraspDemoDriver(Node):
                     time.sleep(1.0)
                     phase = 'SPAWN_WORKPIECE'
             else:
-                self.get_logger().info(f'{phase} next after {time.monotonic() - started:.1f}s')
+                self.get_logger().info(
+                    f'{done} took {time.monotonic() - started:.1f}s -> {phase}')
             if phase != 'DONE':
                 time.sleep(self.pause_sec)
 

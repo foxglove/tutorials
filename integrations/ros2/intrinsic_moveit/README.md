@@ -55,21 +55,26 @@ flowchart LR
 ## Requirements
 
 - Docker with Compose v2
-- About 6 GB of free disk (the image is about 3 GB)
+- About 8 GB of free disk. The built image is 3.1 GB
 - Tested on x86_64. Jazzy publishes arm64 builds of these packages, but that path is untested
 - [Foxglove](https://foxglove.dev) desktop or [app.foxglove.dev](https://app.foxglove.dev)
 
 No display server or GPU is required. The container launches MoveIt with `headless:=true`.
 
-Packages used to build the image on Ubuntu Noble (versions float with the Jazzy apt snapshot; recorded September 2026):
+The base image is pinned to `ros:jazzy-ros-base@sha256:c3706ef0a0aa45413c07803cf433602f543b22e45b4855f6fca955c2d8ecc4e8`. Apt packages are not pinned: `snapshots.ros.org` has Jazzy indexes, but none for the September 2026 set this tutorial was tested with (the newest indexed dates are from 2024), so the build follows `packages.ros.org`. Versions observed in the image:
 
 | Package | Version observed in this image |
 | --- | --- |
-| `ros-jazzy-moveit` | 2.12.4-1noble.20260905.083030 |
+| `ros-jazzy-moveit-core` | 2.12.4-1noble.20260903.075716 |
+| `ros-jazzy-moveit-ros-move-group` | 2.12.4-1noble.20260903.094420 |
+| `ros-jazzy-moveit-planners-ompl` | 2.12.4-1noble.20260903.093406 |
+| `ros-jazzy-pilz-industrial-motion-planner` | 2.12.4-1noble.20260903.100010 |
 | `ros-jazzy-moveit-task-constructor-core` | 0.1.8-1noble.20260904.024044 |
 | `ros-jazzy-foxglove-bridge` | 3.5.0-1noble.20260902.084741 |
 | `ros-jazzy-rosbag2-storage-mcap` | 0.26.11-1noble.20260903.070458 |
 | `ros-jazzy-ur-description` | 3.5.1-1noble.20260905.072414 |
+
+The image installs the MoveIt libraries the launch file and standalone node link, not the `ros-jazzy-moveit` metapackage. `ur-description` is unpacked from its deb without installing the package, because that package depends on `rviz2`. The URDF's `find_package(rviz2)` is satisfied by an empty CMake config so RViz, Qt, and LLVM are not installed. Default CHOMP and STOMP pipeline files shipped by `moveit_configs_utils` are removed; joint transits use Pilz PTP and fall back to OMPL.
 
 ## Quick start
 
@@ -108,10 +113,10 @@ The arm stands on a grey table. The shaded rectangle is the OMTS return-shift wi
 | Phase | What happens |
 | --- | --- |
 | `SPAWN_WORKPIECE` | The billet is added to the MoveIt scene |
-| `PLAN_GRASPS` | `/grasp_planning/plan_grasps` runs the MTC pipeline. Distinct candidates are drawn on the billet |
-| `SELECT_GRASP` | The best feasible candidate turns green. The Raw Messages panel shows the `moveit_msgs/Grasp` |
+| `PLAN_GRASPS` | `/grasp_planning/plan_grasps` runs the MTC pipeline. The planner returns 10 IK variants of typically two distinct poses, and those poses are drawn on the billet |
+| `SELECT_GRASP` | The closest feasible candidate turns green. The Raw Messages panel shows the `moveit_msgs/Grasp` |
 | `OPEN_GRIPPER` | The Hand-E opens |
-| `MOVE_TO_PREGRASP` | OMPL plans to Intrinsic's pre-grasp IK solution and the arm moves |
+| `MOVE_TO_PREGRASP` | The driver picks the feasible IK solution closest to the current joints (each joint wrapped by `2π` into the UR limits) and plans a joint transit to it |
 | `APPROACH` | A 10 cm Cartesian move along the tool to the grasp pose |
 | `GRASP` | The fingers close to the billet width and the object is attached to `hande_tcp` |
 | `RETREAT` | 10 cm back along the tool |
@@ -119,11 +124,13 @@ The arm stands on a grey table. The shaded rectangle is the OMTS return-shift wi
 | `PLACE_DESCEND` | Cartesian move down onto the ghost |
 | `RELEASE` | The gripper opens and the billet is detached |
 | `RETREAT_UP` | The tool backs off |
-| `PARK` | The gripper closes and the arm returns to the SRDF `ready` pose. The cycle counter increments |
+| `PARK` | The gripper closes and the arm returns to the work-facing home pose. The cycle counter increments |
 
-The loop then plans a new grasp for the billet at its new pose. Candidates are ranked by `grasp_quality` (highest first), with a more top-down approach winning ties. Up to three distinct poses are tried if a pre-grasp motion fails.
+Home is the SRDF `ready` pose with `shoulder_pan_joint` rotated by π (`-2.8173` instead of `-0.1597`), so `hande_tcp` sits above the OMTS window and points down. Joint transits (home, pre-grasp, and place) request Pilz PTP and fall back to OMPL if that pipeline rejects the goal.
 
-The billet is 50.8 mm across the gripped face and the Hand-E stroke is about 50 mm (`open = -0.001`, `closed = 0.025` on `hande_left_finger_joint`). The fingers barely move at the moment of grasp. The hand is opened before the approach and parked closed between cycles so the motion is visible.
+The loop then plans a new grasp for the billet at its new pose. Feasible IK variants are ranked by weighted joint distance from the current arm, after wrapping each joint onto the equivalent angle closest to where it is now. `grasp_quality` only breaks ties. Variants that would flip `wrist_2` by more than π/2, or swing the base more than π/2 away from home, are dropped. Up to three distinct poses are tried if a pre-grasp motion fails. If none of Intrinsic's IK solutions pass, the driver calls `/compute_ik` on the pre-grasp pose seeded with the current joints.
+
+The billet is 50.8 mm across the gripped face. `gripper_max_opening` is 0.052 m because the upstream open posture is `-0.001` m per finger on a 0.050 m nominal stroke (`opening = 0.050 - 2q`). The computed close command for this face is about `-0.0004` m, so the fingers move about 0.6 mm at the moment of grasp. The hand is opened before the approach and parked closed between cycles, and that open/close is the motion you see.
 
 ### Topics
 
@@ -144,13 +151,13 @@ The billet is 50.8 mm across the gripped face and the Hand-E stroke is about 50 
 
 Also published by the upstream launch: `/robot_description`, `/robot_description_semantic`, `/tf`, `/tf_static`, `/joint_states`, `/ur_manipulator_controller/controller_state`, and `/rosout`.
 
-The layout's **Details** tab plots commanded and actual arm joints from the joint trajectory controller, the gripper joint (`/joint_states.position[1]`, `hande_left_finger_joint`), and grasp-planning latency.
+The layout's **Details** tab plots arm-joint feedback, the gripper joint (`/joint_states.position[1]`, `hande_left_finger_joint`), grasp-planning latency and candidate count, and the cycle and failure counters.
 
 ## Recordings
 
-With `RECORD=true` (the default), rosbag2 writes an MCAP file under `./recordings/intrinsic_grasp_demo_<timestamp>/`. Open that file in Foxglove, import the same layout, and enable the **URDF (offline web)** layer (topic `/robot_description_web`) while hiding the live `/robot_description` layer. Mesh URLs then load from `raw.githubusercontent.com` at the pinned commit, which sends `access-control-allow-origin: *`.
+With `RECORD=true` (the default), rosbag2 writes an MCAP file under `./recordings/intrinsic_grasp_demo_<timestamp>/`. Open that file in Foxglove and import [`foxglove_layouts/intrinsic_moveit_grasp_demo_playback.json`](foxglove_layouts/intrinsic_moveit_grasp_demo_playback.json). It matches the live layout, except the **URDF (offline web)** layer (`/robot_description_web`) is on and the live `/robot_description` layer is off. Mesh URLs then load from `raw.githubusercontent.com` at the pinned commit, which sends `access-control-allow-origin: *`.
 
-Live Foxglove sessions should keep the `/robot_description` URDF layer enabled. The bridge fetches `package://` meshes itself. The Hand-E body DAE is about 12 MB, so the first load is slow.
+Live Foxglove sessions should import [`foxglove_layouts/intrinsic_moveit_grasp_demo.json`](foxglove_layouts/intrinsic_moveit_grasp_demo.json) and keep the `/robot_description` URDF layer enabled. The bridge fetches `package://` meshes itself. The Hand-E body DAE is about 12 MB, so the first load is slow.
 
 ## Call the grasp service yourself
 
@@ -211,9 +218,9 @@ The standalone node only compiles the SDK-free sources. A commit that changes th
 - **Port 8765 is in use.** Stop the other process or change the host mapping in `compose.yaml`.
 - **The robot has no meshes.** Wait for the first asset fetch (tens of megabytes). Confirm the bridge is the Foxglove WebSocket endpoint, not a raw rosbridge URL. The subprotocol is `foxglove.sdk.v1`.
 - **Offline playback has no meshes.** Toggle the URDF layer to `/robot_description_web`.
-- **The arm pauses in `RECOVER`.** A sampled place pose was unreachable. The driver detaches, returns to ready, and samples a new billet pose. `/demo/failures` counts these events.
+- **The arm pauses in `RECOVER`.** A sampled place pose was unreachable. The driver detaches, returns to the work-facing home pose, and samples a new billet pose. `/demo/failures` counts these events.
 - **Logs.** `docker compose logs -f`.
 
 ## License
 
-`intrinsic-moveit` is Apache-2.0. `robot_hardware_moveit_config` is BSD-3-Clause. The standalone `moveit_planning_node` is derived from Intrinsic's `moveit_planning_node.cpp` and stays under Apache-2.0. The demo driver, launch file, and layout in this folder are Apache-2.0.
+`intrinsic-moveit` is Apache-2.0. `robot_hardware_moveit_config` is BSD-3-Clause. The standalone `moveit_planning_node` is derived from Intrinsic's `moveit_planning_node.cpp` and keeps that file's Apache-2.0 header and the "derived from" notice.

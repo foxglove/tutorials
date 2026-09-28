@@ -24,9 +24,7 @@
 #include <moveit_msgs/srv/get_planning_scene.hpp>
 #include <moveit_planning_interfaces/srv/plan_grasps.hpp>
 #include <rclcpp/rclcpp.hpp>
-#include <string>
 #include <thread>
-#include <vector>
 
 #include "moveit_planning_service/grasp_planning_pipeline.hpp"
 #include "rclcpp/experimental/executors/events_executor/events_executor.hpp"

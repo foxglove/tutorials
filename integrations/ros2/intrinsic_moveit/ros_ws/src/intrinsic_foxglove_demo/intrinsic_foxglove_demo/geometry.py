@@ -1,6 +1,7 @@
 import math
 
 import numpy as np
+from geometry_msgs.msg import Pose, Transform
 
 
 def quat_to_mat(xyzw):
@@ -84,7 +85,6 @@ def matrix_from_xyz_quat(xyz, xyzw):
 
 
 def matrix_to_pose(transform):
-    from geometry_msgs.msg import Pose
     pose = Pose()
     pose.position.x = float(transform[0, 3])
     pose.position.y = float(transform[1, 3])
@@ -98,7 +98,6 @@ def matrix_to_pose(transform):
 
 
 def matrix_to_transform(transform):
-    from geometry_msgs.msg import Transform
     out = Transform()
     out.translation.x = float(transform[0, 3])
     out.translation.y = float(transform[1, 3])
@@ -109,10 +108,6 @@ def matrix_to_transform(transform):
     out.rotation.z = z
     out.rotation.w = w
     return out
-
-
-def compose(first, second):
-    return first @ second
 
 
 def invert(transform):

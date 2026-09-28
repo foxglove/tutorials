@@ -177,7 +177,7 @@
           "divisions": 20
         },
         "b1c2d3e4-f5a6-7890-abcd-ef1234567891": {
-          "visible": true,
+          "visible": false,
           "frameLocked": true,
           "label": "URDF",
           "instanceId": "b1c2d3e4-f5a6-7890-abcd-ef1234567891",
@@ -192,7 +192,7 @@
           "order": 1
         },
         "c2d3e4f5-a6b7-8901-bcde-f12345678902": {
-          "visible": false,
+          "visible": true,
           "frameLocked": true,
           "label": "URDF (offline web)",
           "instanceId": "c2d3e4f5-a6b7-8901-bcde-f12345678902",
@@ -387,7 +387,7 @@
           "divisions": 20
         },
         "e5f6a7b8-c9d0-4123-9ef0-123456789ab0": {
-          "visible": true,
+          "visible": false,
           "frameLocked": true,
           "label": "URDF",
           "instanceId": "e5f6a7b8-c9d0-4123-9ef0-123456789ab0",
@@ -402,7 +402,7 @@
           "order": 1
         },
         "e5f6a7b8-c9d0-4123-9ef0-123456789ab1": {
-          "visible": false,
+          "visible": true,
           "frameLocked": true,
           "label": "URDF (offline web)",
           "instanceId": "e5f6a7b8-c9d0-4123-9ef0-123456789ab1",
