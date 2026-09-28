@@ -1117,12 +1117,15 @@ def main():
     executor.add_node(node)
 
     def _spin():
-        # SIGINT shuts the context down under this thread. That raises RCLError
-        # from the wait set; the process should still exit quietly.
+        # SIGINT shuts the context down under this thread and raises from the
+        # wait set. Log only while the context is still alive.
         try:
             executor.spin()
-        except (KeyboardInterrupt, Exception):
+        except KeyboardInterrupt:
             pass
+        except Exception as exc:
+            if rclpy.ok():
+                node.get_logger().error(f'executor stopped: {exc!r}')
 
     spinner = threading.Thread(target=_spin, daemon=True)
     spinner.start()

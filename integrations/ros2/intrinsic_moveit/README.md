@@ -225,6 +225,7 @@ The standalone node only compiles the SDK-free sources. A commit that changes th
 - **The robot has no meshes.** Wait for the first asset fetch (tens of megabytes). Confirm the bridge is the Foxglove WebSocket endpoint, not a raw rosbridge URL. The subprotocol is `foxglove.sdk.v1`.
 - **Offline playback has no meshes.** Import [`foxglove_layouts/intrinsic_moveit_grasp_demo_playback.json`](foxglove_layouts/intrinsic_moveit_grasp_demo_playback.json). It enables the `/robot_description_web` URDF layer and hides the live `/robot_description` layer.
 - **The arm pauses in `RECOVER`.** A sampled place pose was unreachable. The driver detaches, returns to the work-facing home pose, and samples a new billet pose. `/demo/failures` counts these events.
+- **`move_group` prints a segfault on Ctrl-C.** Stopping the stack can show a stack trace in `rclcpp::Executor::~Executor()` and `process has died … exit code -11`. That is an upstream MoveIt shutdown crash; it also happens with Intrinsic's stock `service.launch.py` alone. The MCAP is already finalized when it appears.
 - **Logs.** `docker compose logs -f`.
 
 ## License
