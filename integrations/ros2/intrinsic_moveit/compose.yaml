@@ -1,0 +1,24 @@
+services:
+  intrinsic-moveit-demo:
+    build:
+      context: .
+      args:
+        INTRINSIC_MOVEIT_COMMIT: c5e3290aa0f0e64c2d106a2fb4eb10cb52592205
+    image: foxglove-tutorials/intrinsic-moveit-demo:latest
+    ports:
+      - "8765:8765"
+    volumes:
+      - ./recordings:/recordings
+    environment:
+      RECORD: "${RECORD:-true}"
+      DEMO_CYCLES: "${DEMO_CYCLES:-0}"
+    shm_size: 1gb
+    init: false
+    stop_signal: SIGINT
+    stop_grace_period: 30s
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c '</dev/tcp/127.0.0.1/8765'"]
+      interval: 5s
+      timeout: 2s
+      retries: 30
+      start_period: 20s

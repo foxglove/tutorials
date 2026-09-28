@@ -70,6 +70,8 @@ Below is a list of all tutorials available in this repository:
 ### [ROS 2 Diagnostics Tutorial](integrations/ros2/diagnostics/README.md)
 - 📝 Basic example of publishing and visualizing DiagnosticArray messages
 - 🔗 [Related Blog Post](https://foxglove.dev/blog/a-practical-guide-to-using-ros-diagnostics)
+### [Intrinsic MoveIt grasp planning (UR5e + Robotiq Hand-E) in Foxglove](integrations/ros2/intrinsic_moveit/README.md)
+- 📝 Run Intrinsic's open-source MoveIt Task Constructor grasp planner for the OMTS cell on mock hardware in Docker and visualize candidates and motions live in Foxglove
 ### [ROS 2 Launch Files Tutorial](integrations/ros2/launch/README.md)
 - 📝 Code reference for ROS 2 launch files tutorial
 - 🔗 [Related Blog Post](https://foxglove.dev/blog/how-to-use-ros2-launch-files)

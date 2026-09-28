@@ -1,0 +1,40 @@
+grasp_demo_driver:
+  ros__parameters:
+    object_id: raw_stock
+    object_label: raw_stock_2x3x5
+    object_dims: [0.0762, 0.127, 0.0508]
+    object_base_quat_xyzw: [0.70710678, 0.0, 0.70710678, 0.0]
+    table_size: [1.2, 1.2, 0.04]
+    table_center: [0.3, 0.0, -0.021]
+    return_shift_center: [0.45, 0.0]
+    return_shift_bounds_xy: [0.1, 0.1]
+    return_shift_bounds_yaw_deg: 40.0
+    initial_object_xy_yaw_deg: [0.45, 0.1, 30.0]
+    min_place_distance: 0.06
+    random_seed: 7
+    group_name: ur_manipulator
+    end_effector_group: hand
+    tool_frame: hande_tcp
+    planning_timeout_sec: 10.0
+    gripper_motion_duration_sec: 0.75
+    retract_dist_m: 0.1
+    surfaces: [0, 1, 2, 3, 4, 5]
+    num_rotations: 4
+    ready_joints:
+      shoulder_pan_joint: -0.1597
+      shoulder_lift_joint: -1.3542
+      elbow_joint: -1.6648
+      wrist_1_joint: -1.6933
+      wrist_2_joint: 1.571
+      wrist_3_joint: 1.411
+    transit_velocity_scaling: 0.5
+    cartesian_velocity_scaling: 0.2
+    gripper_open: -0.001
+    gripper_closed: 0.025
+    gripper_nominal_stroke: 0.050
+    gripper_max_opening: 0.052
+    cycles: 0
+    pause_between_phases_sec: 0.4
+    motion_plan_service: /plan_kinematic_path
+    robot_description_web_base: "https://raw.githubusercontent.com/intrinsic-ai/intrinsic-moveit/{commit}/robot_hardware_description/"
+    intrinsic_moveit_commit: ""
