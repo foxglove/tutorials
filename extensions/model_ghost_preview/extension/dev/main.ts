@@ -19,17 +19,37 @@ type PoseMessage = {
 
 function samplePath(t: number): { position: Vec3; orientation: Quat } {
   const length = 96;
+  const scale = length / 280;
   const s = t / DURATION;
   const x = s * length;
-  const y = 18 * s * s;
-  const z = 1.5 * s;
+  const y = scale * (35 * Math.sin(s * Math.PI * 1.5) + 8 * Math.sin(s * Math.PI * 4));
+  const z = scale * (6 * s + 1.5 * Math.sin(s * Math.PI * 2));
   const ds = 1 / DURATION;
   const dx = length * ds;
-  const dy = 36 * s * ds;
+  const dy =
+    scale *
+    (35 * Math.PI * 1.5 * ds * Math.cos(s * Math.PI * 1.5) +
+      8 * Math.PI * 4 * ds * Math.cos(s * Math.PI * 4));
+  const dz = scale * (6 * ds + 1.5 * Math.PI * 2 * ds * Math.cos(s * Math.PI * 2));
   const yaw = Math.atan2(dy, dx);
+  const pitch = Math.atan2(dz, Math.hypot(dx, dy));
+  return { position: { x, y, z }, orientation: headingQuaternion(yaw, -pitch) };
+}
+
+function headingQuaternion(yaw: number, pitch: number): Quat {
+  const halfYaw = yaw * 0.5;
+  const halfPitch = pitch * 0.5;
+  const yawQ: Quat = { x: 0, y: 0, z: Math.sin(halfYaw), w: Math.cos(halfYaw) };
+  const pitchQ: Quat = { x: 0, y: Math.sin(halfPitch), z: 0, w: Math.cos(halfPitch) };
+  return multiplyQuat(yawQ, pitchQ);
+}
+
+function multiplyQuat(a: Quat, b: Quat): Quat {
   return {
-    position: { x, y, z },
-    orientation: { x: 0, y: 0, z: Math.sin(yaw / 2), w: Math.cos(yaw / 2) },
+    x: a.w * b.x + a.x * b.w + a.y * b.z - a.z * b.y,
+    y: a.w * b.y - a.x * b.z + a.y * b.w + a.z * b.x,
+    z: a.w * b.z + a.x * b.y - a.y * b.x + a.z * b.w,
+    w: a.w * b.w - a.x * b.x - a.y * b.y - a.z * b.z,
   };
 }
 

@@ -45,6 +45,7 @@ try {
     { timeout: 20000 },
   );
   await new Promise((resolve) => setTimeout(resolve, 400));
+  await dollyTowardTruck(page);
 
   const panel = await page.$("#panel");
   if (!panel) {
@@ -74,4 +75,18 @@ try {
   console.log("wrote", ghostPath);
 } finally {
   await browser.close();
+}
+
+async function dollyTowardTruck(page) {
+  const canvas = await page.$("#panel canvas");
+  const box = await canvas?.boundingBox();
+  if (!box) {
+    return;
+  }
+  await page.mouse.move(box.x + box.width * 0.5, box.y + 28);
+  for (let step = 0; step < 16; step += 1) {
+    await page.mouse.wheel({ deltaY: -100 });
+    await new Promise((resolve) => setTimeout(resolve, 20));
+  }
+  await new Promise((resolve) => setTimeout(resolve, 300));
 }

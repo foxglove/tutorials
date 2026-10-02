@@ -74,7 +74,7 @@ Poses are drawn in the topic's own frame. That frame is the panel's fixed world 
 
 glTF assets are Y-up. The loader applies +90° about X before the yaw/pitch/roll offsets so the model stands Z-up. Set roll to -90 to cancel that correction. If the URL fails to load, the panel shows the error and falls back to the truck.
 
-Once the pose range has loaded, the camera frames the path from a rear three-quarter view. Hovering a path vertex sets the preview time; a click without a drag seeks. Orbit dragging is left alone.
+Once the pose range has loaded, the camera frames the road around the current pose from above and to one side, pulled in so a long haul road does not shrink the truck to a speck. Hovering a path vertex sets the preview time; a click without a drag seeks. Orbit dragging is left alone.
 
 ## Supported schemas
 

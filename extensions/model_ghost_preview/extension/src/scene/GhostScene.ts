@@ -31,6 +31,9 @@ import type { Quat, Vec3 } from "../poses/extractPose";
 import type { FollowMode } from "../settings";
 import { buildGhostObject, type GhostAppearance, type GhostObject } from "./ghostMaterial";
 
+const GRID_LIFT = 0.02;
+const GROUND_DROP = 0.04;
+
 export type ScenePose = {
   position: Vec3;
   orientation: Quat;
@@ -260,10 +263,7 @@ export class GhostScene {
     this.#currentRoot.visible = pose != undefined;
     if (pose) {
       applyPose(this.#currentRoot, pose);
-      this.#anchor.z = pose.position[2];
-      if (this.#grid) {
-        this.#grid.position.z = pose.position[2] + 0.02;
-      }
+      this.#setSupportZ(pose.position[2]);
     }
     this.#applyFollow();
     this.#requestRender();
@@ -288,9 +288,7 @@ export class GhostScene {
     visibility: "shown" | "hidden";
   }): void {
     const count = Math.min(path.times.length, Math.floor(path.points.length / 3));
-    const first = path.points[0] ?? 0;
-    const last = path.points[Math.max(0, path.points.length - 1)] ?? 0;
-    const key = `${path.visibility}:${path.color}:${count}:${first}:${last}`;
+    const key = `${path.visibility}:${path.color}:${count}:${hashSeries(path.points)}:${hashSeries(path.times)}`;
     if (key === this.#pathKey) {
       return;
     }
@@ -354,19 +352,35 @@ export class GhostScene {
   }
 
   framePath(): void {
-    const start = this.#pathPoints[0];
-    const end = this.#pathPoints[this.#pathPoints.length - 1];
-    if (!start || !end) {
+    const pose = this.#currentPose;
+    const anchor = pose
+      ? new Vector3(pose.position[0], pose.position[1], pose.position[2])
+      : this.#pathPoints[0];
+    if (!anchor) {
       return;
     }
-    const bounds = new Box3();
+    const local: Vector3[] = [];
     for (const point of this.#pathPoints) {
+      if (Math.hypot(point.x - anchor.x, point.y - anchor.y) <= 50) {
+        local.push(point);
+      }
+    }
+    if (local.length === 0) {
+      local.push(anchor);
+    }
+    const bounds = new Box3();
+    for (const point of local) {
       bounds.expandByPoint(point);
     }
+    bounds.expandByScalar(6);
     const focus = bounds.getCenter(new Vector3());
+    focus.lerp(anchor, 0.4);
     focus.z += 1.2;
     const size = bounds.getSize(new Vector3());
-    const radius = Math.max(0.5 * Math.hypot(size.x, size.y, size.z), 12);
+    const span = 0.5 * Math.hypot(size.x, size.y, size.z);
+    const radius = Math.min(Math.max(span, 14), 55);
+    const start = local[0] ?? anchor;
+    const end = local[local.length - 1] ?? anchor;
     const vertical = (this.#camera.fov * Math.PI) / 180;
     const aspect = this.#width / Math.max(this.#height, 1);
     const horizontal = 2 * Math.atan(Math.tan(vertical / 2) * Math.max(aspect, 0.5));
@@ -443,7 +457,7 @@ export class GhostScene {
       dark ? 0x3a444e : 0xc9d1d8,
     );
     grid.rotation.x = Math.PI / 2;
-    grid.position.set(this.#anchor.x, this.#anchor.y, this.#anchor.z + 0.02);
+    grid.position.set(this.#anchor.x, this.#anchor.y, this.#anchor.z + GRID_LIFT);
     this.#scene.add(grid);
     this.#grid = grid;
   }
@@ -514,12 +528,20 @@ export class GhostScene {
     }
     const span = Math.max(maxX - minX, maxY - minY, 40);
     this.#gridSize = Math.max(span * 1.5, 80);
-    const poseZ = this.#currentPose?.position[2];
-    this.#anchor.set((minX + maxX) / 2, (minY + maxY) / 2, poseZ ?? minZ);
+    const supportZ = this.#currentPose?.position[2] ?? minZ;
+    this.#anchor.set((minX + maxX) / 2, (minY + maxY) / 2, supportZ);
     this.#ground.geometry.dispose();
     this.#ground.geometry = new PlaneGeometry(this.#gridSize, this.#gridSize);
-    this.#ground.position.set((minX + maxX) / 2, (minY + maxY) / 2, minZ - 0.02);
+    this.#ground.position.set((minX + maxX) / 2, (minY + maxY) / 2, supportZ - GROUND_DROP);
     this.#rebuildGrid();
+  }
+
+  #setSupportZ(z: number): void {
+    this.#anchor.z = z;
+    this.#ground.position.z = z - GROUND_DROP;
+    if (this.#grid) {
+      this.#grid.position.z = z + GRID_LIFT;
+    }
   }
 
   #measureLabelOffset(): void {
@@ -808,6 +830,14 @@ function disposeMaterial(material: Material | readonly Material[]): void {
 
 function isMaterialList(value: Material | readonly Material[]): value is readonly Material[] {
   return Object.prototype.toString.call(value) === "[object Array]";
+}
+
+function hashSeries(values: Iterable<number>): number {
+  let hash = 0;
+  for (const value of values) {
+    hash = (hash * 31 + Math.round(value * 1000)) % 1000000007;
+  }
+  return hash;
 }
 
 function linePositions(points: readonly Vector3[], lift: number): Float32Array {

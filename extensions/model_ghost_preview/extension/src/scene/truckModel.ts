@@ -1,4 +1,4 @@
-import { BoxGeometry, Color, CylinderGeometry, Group, Mesh, MeshStandardMaterial, type BufferGeometry, type Material } from "three";
+import { BoxGeometry, Color, CylinderGeometry, Euler, Group, Mesh, MeshStandardMaterial, Quaternion, Vector3, type BufferGeometry, type Material } from "three";
 
 import type { Vec3 } from "../poses/extractPose";
 
@@ -31,6 +31,8 @@ export function createTruckModel(bodyColor: string): Group {
   const root = new Group();
   const wheelGeo = new CylinderGeometry(1.1, 1.1, 0.86, 20);
   const hubGeo = new CylinderGeometry(0.42, 0.42, 0.98, 12);
+  const hoistGeo = new CylinderGeometry(0.12, 0.12, 1.15, 12);
+  const hoistTilt = tiltTowardBed(0.4);
 
   add(root, { name: "chassis", geometry: box(7.0, 1.4, 0.42), material: dark, position: [0.3, 0, 1.15] });
   add(root, { name: "frame", geometry: box(6.4, 1.2, 1.22), material: dark, position: [0.15, 0, 1.7] });
@@ -46,20 +48,8 @@ export function createTruckModel(bodyColor: string): Group {
     material: dark,
     position: [-1.3, 0, 1.1],
   });
-  add(root, {
-    name: "hoist",
-    geometry: new CylinderGeometry(0.16, 0.16, 0.4, 12),
-    material: dark,
-    position: [-0.35, 0.42, 2.28],
-    rotation: [Math.PI / 2, 0, 0],
-  });
-  add(root, {
-    name: "hoist",
-    geometry: new CylinderGeometry(0.16, 0.16, 0.4, 12),
-    material: dark,
-    position: [-0.35, -0.42, 2.28],
-    rotation: [Math.PI / 2, 0, 0],
-  });
+  add(root, { name: "hoist", geometry: hoistGeo, material: dark, position: [-0.15, 0.78, 1.9], rotation: hoistTilt });
+  add(root, { name: "hoist", geometry: hoistGeo, material: dark, position: [-0.15, -0.78, 1.9], rotation: hoistTilt });
   add(root, { name: "deck", geometry: box(2.5, 3.3, 0.16), material: dark, position: [3.25, 0, 2.42] });
   add(root, { name: "bed-floor", geometry: box(5.5, 5.6, 0.16), material: bed, position: [-0.55, 0, 2.48] });
   add(root, { name: "bed-wall", geometry: box(5.5, 0.16, 1.35), material: body, position: [-0.55, 2.72, 3.22] });
@@ -137,6 +127,12 @@ export function createTruckModel(bodyColor: string): Group {
     }
   });
   return root;
+}
+
+function tiltTowardBed(radians: number): Vec3 {
+  const direction = new Vector3(Math.sin(radians), 0, Math.cos(radians));
+  const euler = new Euler().setFromQuaternion(new Quaternion().setFromUnitVectors(new Vector3(0, 1, 0), direction));
+  return [euler.x, euler.y, euler.z];
 }
 
 function add(parent: Group, part: Part): void {
