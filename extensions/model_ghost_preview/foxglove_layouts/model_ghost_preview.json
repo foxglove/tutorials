@@ -1,0 +1,97 @@
+{
+  "configById": {
+    "model-ghost-preview.Model Ghost Preview!ghost": {
+      "general": {
+        "poseTopic": "/truck/pose",
+        "childFrameId": "",
+        "interpolation": "interpolate"
+      },
+      "model": {
+        "source": "truck",
+        "url": "",
+        "scale": 1,
+        "yaw": 0,
+        "pitch": 0,
+        "roll": 0,
+        "truckColor": "#e6b422"
+      },
+      "ghost": {
+        "visible": true,
+        "style": "wireframe",
+        "color": "#4fc3f7",
+        "opacity": 0.6,
+        "showTimeLabel": true
+      },
+      "path": {
+        "visible": true,
+        "color": "#2b3cff",
+        "highlightSegment": true
+      },
+      "view": {
+        "follow": "off",
+        "showGrid": true
+      }
+    },
+    "3D!scene": {
+      "followTf": "truck",
+      "followMode": "follow-pose",
+      "scene": {
+        "meshUpAxis": "z_up",
+        "transforms": {
+          "labelSize": 0
+        }
+      },
+      "topics": {
+        "/scene/road": {
+          "visible": true
+        },
+        "/tf": {
+          "visible": true
+        }
+      },
+      "layers": {
+        "grid": {
+          "visible": true,
+          "layerId": "foxglove.Grid",
+          "size": 20,
+          "divisions": 20,
+          "color": "#248eff"
+        }
+      },
+      "cameraState": {
+        "perspective": true,
+        "distance": 40,
+        "phi": 55,
+        "thetaOffset": 30,
+        "target": [0, 0, 0],
+        "targetOffset": [0, 0, 0],
+        "targetOrientation": [0, 0, 0, 1],
+        "fovy": 45,
+        "near": 0.5,
+        "far": 5000
+      }
+    },
+    "RawMessages!pose": {
+      "topicPath": "/truck/pose",
+      "diffEnabled": false,
+      "showFullMessageForDiff": false,
+      "fontSize": 12
+    }
+  },
+  "globalVariables": {},
+  "userNodes": {},
+  "playbackConfig": {
+    "speed": 1
+  },
+  "layout": {
+    "direction": "row",
+    "first": "model-ghost-preview.Model Ghost Preview!ghost",
+    "second": {
+      "direction": "column",
+      "first": "3D!scene",
+      "second": "RawMessages!pose",
+      "splitPercentage": 68
+    },
+    "splitPercentage": 58
+  }
+}

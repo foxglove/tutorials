@@ -14,6 +14,7 @@ TEMPLATE_PATH = os.path.join(".utils", "README_template.md.j2")
 
 CATEGORY_NAMES = {
     "datasets": "Datasets",
+    "extensions": "Foxglove Extensions",
     "foxglove_sdk": "Foxglove SDK",
     "integrations": "Integrations",
     "jupyter_notebooks": "Jupyter Notebooks"
@@ -43,6 +44,7 @@ def extract_metadata(readme_path):
 def scan_tutorials():
     tutorials = []
     for root, dirs, files in os.walk(ROOT_DIR):
+        dirs[:] = [name for name in dirs if name not in {"node_modules", "dist", ".git"}]
         if "README.md" in files and root != ROOT_DIR:
             readme_path = os.path.join(root, "README.md")
             rel_path = os.path.relpath(readme_path, ROOT_DIR)
