@@ -49,7 +49,7 @@ The file is about 60 seconds at 20 Hz. A truck drives a winding haul road a few 
 | `/tf` | `foxglove.FrameTransforms` | `map` → `truck`, so the built-in 3D panel can follow the same motion. |
 | `/scene/road` | `foxglove.SceneUpdate` | Road ribbon, center line, and a few berms, published once. |
 
-Open the MCAP in Foxglove, then import [`foxglove_layouts/model_ghost_preview.json`](foxglove_layouts/model_ghost_preview.json) from the layout menu. The layout places this panel next to a 3D panel and a Raw Messages panel on `/truck/pose`.
+Open the MCAP in Foxglove, then import [`foxglove_layouts/model_ghost_preview.json`](foxglove_layouts/model_ghost_preview.json) from the layout menu. The layout places this panel next to a 3D panel and a Raw Messages panel on `/truck/pose`. If a panel shows up as unknown after import, add **Model Ghost Preview** from the panel list and pick the pose topic (or add the panel yourself, then export a layout).
 
 Poses are drawn in the topic's own frame. That frame is the panel's fixed world frame — there is no TF tree. The message **receive time** (log time) is the timeline key, because that is what the playback bar and `currentTime` use.
 
@@ -58,7 +58,7 @@ Poses are drawn in the topic's own frame. That frame is the panel's fixed world 
 | Group | Setting | Notes |
 | --- | --- | --- |
 | General | Pose topic | Supported schemas only. |
-| General | Child frame | Shown for TF-like schemas. Empty uses the first transform. |
+| General | Child frame | Shown for TF-like schemas. Empty locks onto the first `child_frame_id` seen in the range; the field suggests frames observed on the topic. |
 | General | Interpolation | `interpolate` (lerp position, slerp rotation) or `previous`. |
 | Model | Source | Procedural haul truck, or a `.glb` / `.gltf` URL. |
 | Model | Scale, yaw, pitch, roll | Degrees, Euler ZYX. |

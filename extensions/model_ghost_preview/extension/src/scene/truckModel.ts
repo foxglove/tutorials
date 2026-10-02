@@ -1,19 +1,9 @@
-import {
-  BoxGeometry,
-  CanvasTexture,
-  Color,
-  CylinderGeometry,
-  Group,
-  Mesh,
-  MeshStandardMaterial,
-  SRGBColorSpace,
-  type BufferGeometry,
-  type Material,
-} from "three";
+import { BoxGeometry, Color, CylinderGeometry, Group, Mesh, MeshStandardMaterial, type BufferGeometry, type Material } from "three";
 
 import type { Vec3 } from "../poses/extractPose";
 
 type Part = {
+  name: string;
   geometry: BufferGeometry;
   material: Material;
   position: Vec3;
@@ -23,97 +13,96 @@ type Part = {
 const DEFAULT_BODY = "#e6b422";
 
 export function createTruckModel(bodyColor: string): Group {
-  const color = cssColor(bodyColor, DEFAULT_BODY);
-  const body = new MeshStandardMaterial({
-    color: "#ffffff",
-    map: paintBody(color),
-    roughness: 0.55,
-    metalness: 0.12,
-  });
-  const bed = new MeshStandardMaterial({ color: "#f0c14a", roughness: 0.72, metalness: 0.06 });
-  const dark = new MeshStandardMaterial({ color: "#24282c", roughness: 0.55, metalness: 0.35 });
-  const tire = new MeshStandardMaterial({ color: "#141414", roughness: 0.92, metalness: 0.02 });
-  const hub = new MeshStandardMaterial({ color: "#6a7178", roughness: 0.45, metalness: 0.55 });
-  const glass = new MeshStandardMaterial({
-    color: "#1b2836",
-    roughness: 0.12,
-    metalness: 0.7,
-  });
+  const paint = cssColor(bodyColor, DEFAULT_BODY);
+  const body = steel(paint, 0.46, 0.22);
+  const bed = steel(shade(paint, 0.82), 0.55, 0.16);
+  const dark = steel("#2a2e32", 0.5, 0.4);
+  const tire = steel("#141414", 0.92, 0.04);
+  const hub = steel("#6d747b", 0.4, 0.62);
+  const glass = steel("#1b2836", 0.12, 0.7);
   const lamp = new MeshStandardMaterial({
     color: "#ffe7a3",
     emissive: "#ffcc66",
     emissiveIntensity: 0.7,
-    roughness: 0.4,
+    roughness: 0.35,
+    metalness: 0.15,
   });
 
   const root = new Group();
-  const wheelGeo = new CylinderGeometry(1.05, 1.05, 0.78, 16);
-  const hubGeo = new CylinderGeometry(0.42, 0.42, 0.92, 12);
-  const axle = Math.PI / 2;
+  const wheelGeo = new CylinderGeometry(1.1, 1.1, 0.86, 20);
+  const hubGeo = new CylinderGeometry(0.42, 0.42, 0.98, 12);
 
-  add(root, { geometry: box(6.2, 2.05, 0.48), material: dark, position: [0.15, 0, 1.42] });
-  add(root, { geometry: box(5.9, 3.55, 0.22), material: body, position: [-1.05, 0, 1.95] });
-  add(root, { geometry: box(5.45, 3.2, 0.08), material: bed, position: [-1.05, 0, 2.1] });
-  add(root, { geometry: box(5.9, 0.14, 1.75), material: body, position: [-1.05, 1.84, 2.95] });
-  add(root, { geometry: box(5.9, 0.14, 1.75), material: body, position: [-1.05, -1.84, 2.95] });
-  add(root, { geometry: box(0.16, 3.55, 1.5), material: body, position: [-3.95, 0, 2.8] });
-  add(root, { geometry: box(0.18, 3.55, 2.45), material: body, position: [1.85, 0, 3.3] });
-  add(root, { geometry: box(5.4, 0.12, 0.1), material: dark, position: [-1.05, 1.84, 3.88] });
-  add(root, { geometry: box(5.4, 0.12, 0.1), material: dark, position: [-1.05, -1.84, 3.88] });
-
-  add(root, { geometry: box(1.9, 2.45, 1.95), material: body, position: [2.85, 0, 2.78] });
-  add(root, { geometry: box(2.1, 2.7, 0.14), material: body, position: [2.75, 0, 3.82] });
-  add(root, { geometry: box(1.2, 2.15, 1.15), material: body, position: [4.1, 0, 2.15] });
-  add(root, { geometry: box(0.38, 2.55, 0.58), material: dark, position: [4.72, 0, 1.12] });
-  add(root, { geometry: box(0.08, 1.45, 0.72), material: dark, position: [4.9, 0, 1.85] });
+  add(root, { name: "chassis", geometry: box(7.0, 1.5, 0.45), material: dark, position: [0.3, 0, 1.25] });
+  add(root, { name: "deck", geometry: box(2.5, 3.3, 0.16), material: dark, position: [3.25, 0, 2.42] });
+  add(root, { name: "bed-floor", geometry: box(5.5, 3.45, 0.16), material: bed, position: [-0.55, 0, 2.48] });
+  add(root, { name: "bed-wall", geometry: box(5.5, 0.12, 1.35), material: body, position: [-0.55, 1.72, 3.22] });
+  add(root, { name: "bed-wall", geometry: box(5.5, 0.12, 1.35), material: body, position: [-0.55, -1.72, 3.22] });
+  add(root, { name: "tailgate", geometry: box(0.14, 3.45, 1.2), material: body, position: [-3.25, 0, 3.15] });
+  add(root, { name: "headboard", geometry: box(0.16, 3.45, 1.9), material: body, position: [2.15, 0, 3.5] });
   add(root, {
-    geometry: box(0.08, 2.05, 0.78),
+    name: "canopy",
+    geometry: box(2.15, 3.35, 0.12),
+    material: body,
+    position: [3.05, 0, 4.35],
+    rotation: [0, -0.55, 0],
+  });
+  add(root, { name: "rail", geometry: box(5.2, 0.08, 0.08), material: dark, position: [-0.55, 1.72, 3.95] });
+  add(root, { name: "rail", geometry: box(5.2, 0.08, 0.08), material: dark, position: [-0.55, -1.72, 3.95] });
+
+  add(root, { name: "cab", geometry: box(1.45, 1.25, 1.3), material: body, position: [3.15, 0.72, 3.15] });
+  add(root, { name: "cab-roof", geometry: box(1.6, 1.4, 0.1), material: body, position: [3.1, 0.72, 3.85] });
+  add(root, { name: "hood", geometry: box(1.15, 1.45, 0.55), material: body, position: [4.25, 0.15, 2.75] });
+  add(root, { name: "bumper", geometry: box(0.28, 2.4, 0.42), material: dark, position: [4.85, 0, 1.55] });
+  add(root, { name: "grill", geometry: box(0.08, 1.3, 0.55), material: dark, position: [4.72, 0.1, 2.15] });
+  add(root, {
+    name: "windshield",
+    geometry: box(0.08, 1.15, 0.7),
     material: glass,
-    position: [3.62, 0, 3.15],
-    rotation: [0, -0.35, 0],
+    position: [3.72, 0.72, 3.35],
+    rotation: [0, -0.4, 0],
   });
-  add(root, { geometry: box(0.72, 0.06, 0.48), material: glass, position: [2.7, 1.26, 3.22] });
-  add(root, { geometry: box(0.72, 0.06, 0.48), material: glass, position: [2.7, -1.26, 3.22] });
-  add(root, { geometry: box(0.16, 0.4, 0.22), material: lamp, position: [4.88, 0.7, 1.35] });
-  add(root, { geometry: box(0.16, 0.4, 0.22), material: lamp, position: [4.88, -0.7, 1.35] });
+  add(root, { name: "window", geometry: box(0.7, 0.06, 0.42), material: glass, position: [3.05, 1.36, 3.28] });
+  add(root, { name: "lamp", geometry: box(0.12, 0.32, 0.18), material: lamp, position: [4.9, 0.7, 1.7] });
+  add(root, { name: "lamp", geometry: box(0.12, 0.32, 0.18), material: lamp, position: [4.9, -0.55, 1.7] });
 
   add(root, {
-    geometry: new CylinderGeometry(0.11, 0.13, 1.55, 10),
+    name: "exhaust",
+    geometry: new CylinderGeometry(0.1, 0.12, 1.35, 10),
     material: dark,
-    position: [1.95, 1.2, 3.55],
-    rotation: [axle, 0, 0],
+    position: [2.35, 1.35, 3.7],
+    rotation: [Math.PI / 2, 0, 0],
   });
   add(root, {
-    geometry: new CylinderGeometry(0.38, 0.38, 1.7, 14),
+    name: "tank",
+    geometry: new CylinderGeometry(0.26, 0.26, 1.0, 14),
     material: dark,
-    position: [0.3, 1.4, 1.55],
-    rotation: [0, 0, axle],
+    position: [1.45, -1.05, 1.4],
+    rotation: [0, 0, Math.PI / 2],
   });
 
   const wheels: Vec3[] = [
-    [2.55, 1.7, 1.05],
-    [2.55, -1.7, 1.05],
-    [-1.45, 1.15, 1.05],
-    [-1.45, -1.15, 1.05],
-    [-1.45, 2.05, 1.05],
-    [-1.45, -2.05, 1.05],
+    [3.2, 1.85, 1.1],
+    [3.2, -1.85, 1.1],
+    [-1.3, 1.35, 1.1],
+    [-1.3, -1.35, 1.1],
+    [-1.3, 2.3, 1.1],
+    [-1.3, -2.3, 1.1],
   ];
   for (const position of wheels) {
-    add(root, { geometry: wheelGeo, material: tire, position, rotation: [0, 0, axle] });
-    add(root, { geometry: hubGeo, material: hub, position, rotation: [0, 0, axle] });
+    add(root, { name: "wheel", geometry: wheelGeo, material: tire, position });
+    add(root, { name: "hub", geometry: hubGeo, material: hub, position });
   }
 
-  add(root, { geometry: box(0.07, 0.07, 1.9), material: dark, position: [2.15, -1.4, 1.85] });
-  add(root, { geometry: box(0.07, 0.07, 1.9), material: dark, position: [2.58, -1.4, 1.85] });
-  for (let step = 0; step < 5; step += 1) {
+  add(root, { name: "ladder", geometry: box(0.06, 0.06, 1.5), material: dark, position: [1.95, -0.95, 1.85] });
+  add(root, { name: "ladder", geometry: box(0.06, 0.06, 1.5), material: dark, position: [2.35, -0.95, 1.85] });
+  for (let step = 0; step < 4; step += 1) {
     add(root, {
-      geometry: box(0.5, 0.05, 0.05),
+      name: "ladder",
+      geometry: box(0.46, 0.05, 0.05),
       material: dark,
-      position: [2.36, -1.4, 1.15 + step * 0.32],
+      position: [2.15, -0.95, 1.25 + step * 0.32],
     });
   }
-  add(root, { geometry: box(0.45, 0.7, 0.08), material: dark, position: [3.55, -1.15, 0.7] });
-  add(root, { geometry: box(0.45, 0.7, 0.08), material: dark, position: [3.55, -1.15, 1.05] });
 
   root.traverse((obj) => {
     if (obj instanceof Mesh) {
@@ -126,6 +115,7 @@ export function createTruckModel(bodyColor: string): Group {
 
 function add(parent: Group, part: Part): void {
   const mesh = new Mesh(part.geometry, part.material);
+  mesh.name = part.name;
   mesh.position.set(part.position[0], part.position[1], part.position[2]);
   if (part.rotation) {
     mesh.rotation.set(part.rotation[0], part.rotation[1], part.rotation[2]);
@@ -137,47 +127,20 @@ function box(width: number, depth: number, height: number): BufferGeometry {
   return new BoxGeometry(width, depth, height);
 }
 
+function steel(color: string, roughness: number, metalness: number): MeshStandardMaterial {
+  return new MeshStandardMaterial({ color, roughness, metalness });
+}
+
+function shade(color: string, factor: number): string {
+  const next = new Color(color);
+  next.multiplyScalar(factor);
+  return `#${next.getHexString()}`;
+}
+
 function cssColor(color: string, fallback: string): string {
   try {
     return `#${new Color(color).getHexString()}`;
   } catch {
     return fallback;
   }
-}
-
-function paintBody(css: string): CanvasTexture {
-  const canvas = document.createElement("canvas");
-  canvas.width = 256;
-  canvas.height = 256;
-  const texture = new CanvasTexture(canvas);
-  texture.colorSpace = SRGBColorSpace;
-  texture.anisotropy = 8;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) {
-    return texture;
-  }
-  ctx.fillStyle = css;
-  ctx.fillRect(0, 0, 256, 256);
-  ctx.fillStyle = "rgba(255,255,255,0.16)";
-  ctx.fillRect(0, 0, 256, 48);
-  ctx.fillStyle = "rgba(60, 42, 8, 0.28)";
-  ctx.fillRect(0, 168, 256, 18);
-  ctx.strokeStyle = "rgba(90, 60, 10, 0.35)";
-  ctx.lineWidth = 3;
-  ctx.beginPath();
-  ctx.moveTo(0, 118);
-  ctx.lineTo(256, 118);
-  ctx.stroke();
-  ctx.fillStyle = "rgba(120, 80, 20, 0.14)";
-  for (let i = 0; i < 8; i += 1) {
-    ctx.fillRect((i * 53) % 220, 40 + ((i * 37) % 100), 36, 3);
-  }
-  const fade = ctx.createLinearGradient(0, 0, 0, 256);
-  fade.addColorStop(0, "rgba(255,255,255,0.18)");
-  fade.addColorStop(0.7, "rgba(255,255,255,0)");
-  fade.addColorStop(1, "rgba(90, 60, 0, 0.16)");
-  ctx.fillStyle = fade;
-  ctx.fillRect(0, 0, 256, 256);
-  texture.needsUpdate = true;
-  return texture;
 }

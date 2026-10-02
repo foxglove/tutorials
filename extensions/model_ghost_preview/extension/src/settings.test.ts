@@ -100,6 +100,7 @@ describe("buildSettingsTree", () => {
         { name: "/tf", schemaName: "foxglove.FrameTransforms" },
         { name: "/notes", schemaName: "std_msgs/String" },
       ],
+      childFrameIds: ["base", "truck"],
       actionHandler: () => undefined,
     });
     const general = tree.nodes["general"];
@@ -110,7 +111,11 @@ describe("buildSettingsTree", () => {
     }
     const labels = poseField.options.map((option) => option.label);
     expect(labels).toEqual(["/truck/pose", "/tf"]);
-    expect(general?.fields?.["childFrameId"]).toBeDefined();
+    const childField = general?.fields?.["childFrameId"];
+    expect(childField?.input).toBe("autocomplete");
+    if (childField?.input === "autocomplete") {
+      expect(childField.items).toEqual(["base", "truck"]);
+    }
     expect(tree.nodes["ghost"]?.visible).toBe(true);
     expect(tree.nodes["ghost"]?.label).toBe("Preview");
   });

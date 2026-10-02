@@ -99,7 +99,6 @@ function createContext(panelElement: HTMLDivElement): PanelExtensionContext {
     panelElement,
     initialState: {
       general: { poseTopic: "/truck/pose", childFrameId: "truck" },
-      ghost: { showTimeLabel: false },
     },
     dataSourceProfile: "foxglove",
     layout: {
@@ -116,8 +115,8 @@ function createContext(panelElement: HTMLDivElement): PanelExtensionContext {
       preview = time;
       emit();
     },
-    seekPlayback: (time: number) => {
-      current = time;
+    seekPlayback: (time: number | { sec: number; nsec: number }) => {
+      current = typeof time === "number" ? time : time.sec + time.nsec * 1e-9;
       emit();
     },
     subscribe: () => undefined,

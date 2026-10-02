@@ -2,8 +2,14 @@ import type { Quat, Vec3 } from "./extractPose";
 
 export type InterpolationMode = "interpolate" | "previous";
 
+export type ReceiveTime = {
+  sec: number;
+  nsec: number;
+};
+
 export type TimedPose = {
   tSec: number;
+  receiveTime?: ReceiveTime;
   position: Vec3;
   orientation: Quat;
   frameId: string | undefined;
@@ -77,6 +83,14 @@ export class PoseTimeline {
     };
   }
 
+  rebase(position: Vec3): Vec3 {
+    const origin = this.#samples[0]?.position;
+    if (!origin) {
+      return position;
+    }
+    return [position[0] - origin[0], position[1] - origin[1], position[2] - origin[2]];
+  }
+
   path(): Float32Array {
     const out = new Float32Array(this.#samples.length * 3);
     for (let index = 0; index < this.#samples.length; index += 1) {
@@ -84,9 +98,10 @@ export class PoseTimeline {
       if (!sample) {
         continue;
       }
-      out[index * 3] = sample.position[0];
-      out[index * 3 + 1] = sample.position[1];
-      out[index * 3 + 2] = sample.position[2];
+      const position = this.rebase(sample.position);
+      out[index * 3] = position[0];
+      out[index * 3 + 1] = position[1];
+      out[index * 3 + 2] = position[2];
     }
     return out;
   }
@@ -102,21 +117,34 @@ export class PoseTimeline {
     return out;
   }
 
-  pathSlice(tStart: number, tEnd: number): Float32Array {
+  receiveTimes(): ReceiveTime[] {
+    const out: ReceiveTime[] = [];
+    for (const sample of this.#samples) {
+      out.push(sample.receiveTime ?? timeFromSec(sample.tSec));
+    }
+    return out;
+  }
+
+  pathSlice(tStart: number, tEnd: number, mode: InterpolationMode = "interpolate"): Float32Array {
     const from = Math.min(tStart, tEnd);
     const to = Math.max(tStart, tEnd);
-    const startPose = this.sample(from, "interpolate");
-    const endPose = this.sample(to, "interpolate");
+    const startPose = this.sample(from, mode);
+    const endPose = this.sample(to, mode);
     if (!startPose || !endPose) {
       return new Float32Array();
     }
-    const points: number[] = [...startPose.position];
-    for (const sample of this.#samples) {
-      if (sample.tSec > from && sample.tSec < to) {
-        points.push(sample.position[0], sample.position[1], sample.position[2]);
+    const points: number[] = [...this.rebase(startPose.position)];
+    const firstInterior = firstAfter(this.#samples, from);
+    const endExclusive = lowerBound(this.#samples, to);
+    for (let index = firstInterior; index < endExclusive; index += 1) {
+      const sample = this.#samples[index];
+      if (!sample) {
+        continue;
       }
+      const position = this.rebase(sample.position);
+      points.push(position[0], position[1], position[2]);
     }
-    const end = endPose.position;
+    const end = this.rebase(endPose.position);
     const tail = points.length;
     const sameEnd =
       tail >= 3 &&
@@ -181,6 +209,27 @@ function mergeSamples(current: readonly TimedPose[], incoming: readonly TimedPos
     right += 1;
   }
   return merged;
+}
+
+function firstAfter(samples: readonly TimedPose[], tSec: number): number {
+  const index = lowerBound(samples, tSec);
+  const sample = samples[index];
+  if (sample?.tSec === tSec) {
+    return index + 1;
+  }
+  return index;
+}
+
+function timeFromSec(tSec: number): ReceiveTime {
+  const sec = Math.floor(tSec);
+  const nsec = Math.round((tSec - sec) * 1e9);
+  if (nsec >= 1e9) {
+    return { sec: sec + 1, nsec: 0 };
+  }
+  if (nsec < 0) {
+    return { sec: sec - 1, nsec: 1e9 + nsec };
+  }
+  return { sec, nsec };
 }
 
 function lowerBound(samples: readonly TimedPose[], tSec: number): number {

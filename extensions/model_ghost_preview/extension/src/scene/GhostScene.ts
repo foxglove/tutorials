@@ -1,19 +1,22 @@
 import {
   ACESFilmicToneMapping,
+  Box3,
   BufferGeometry,
   Color,
   DirectionalLight,
   GridHelper,
   HemisphereLight,
+  Line,
   Material,
   Mesh,
-  MeshBasicMaterial,
   MeshStandardMaterial,
   Object3D,
   PerspectiveCamera,
   PlaneGeometry,
+  Points,
   Scene,
   SRGBColorSpace,
+  Texture,
   Vector2,
   Vector3,
   WebGLRenderer,
@@ -23,6 +26,7 @@ import { Line2 } from "three/examples/jsm/lines/Line2.js";
 import { LineGeometry } from "three/examples/jsm/lines/LineGeometry.js";
 import { LineMaterial } from "three/examples/jsm/lines/LineMaterial.js";
 
+import type { ReceiveTime } from "../poses/PoseTimeline";
 import type { Quat, Vec3 } from "../poses/extractPose";
 import type { FollowMode } from "../settings";
 import { buildGhostObject, type GhostAppearance, type GhostObject } from "./ghostMaterial";
@@ -34,7 +38,7 @@ export type ScenePose = {
 
 export type GhostSceneHandlers = {
   onPreviewTime: (timeSec: number | undefined) => void;
-  onSeek: (timeSec: number) => void;
+  onSeek: (time: ReceiveTime) => void;
 };
 
 type FatLine = {
@@ -65,7 +69,15 @@ export class GhostScene {
   #highlightLine: FatLine | undefined;
   #pathPoints: Vector3[] = [];
   #pathTimes: number[] = [];
+  #receiveTimes: ReceiveTime[] = [];
   #pathKey = "";
+  #anchor = new Vector3();
+  #gridSize = 180;
+  #label: HTMLDivElement;
+  #labelText = "";
+  #labelAnchor = new Vector3();
+  #labelActive = false;
+  #labelZOffset = 4.6;
   #highlightKey = "";
   #scheme: "dark" | "light" = "dark";
   #gridVisibility: "shown" | "hidden" = "shown";
@@ -99,6 +111,19 @@ export class GhostScene {
     this.#renderer.domElement.style.display = "block";
     this.#renderer.domElement.style.touchAction = "none";
     container.appendChild(this.#renderer.domElement);
+    this.#label = document.createElement("div");
+    this.#label.style.position = "absolute";
+    this.#label.style.transform = "translate(-50%, -130%)";
+    this.#label.style.padding = "2px 6px";
+    this.#label.style.borderRadius = "4px";
+    this.#label.style.background = "rgba(12, 32, 48, 0.8)";
+    this.#label.style.color = "#d7f3ff";
+    this.#label.style.fontSize = "12px";
+    this.#label.style.fontFamily = "system-ui, sans-serif";
+    this.#label.style.pointerEvents = "none";
+    this.#label.style.whiteSpace = "nowrap";
+    this.#label.style.display = "none";
+    container.appendChild(this.#label);
 
     this.#scene = new Scene();
     this.#camera = new PerspectiveCamera(42, 1, 0.2, 4000);
@@ -167,6 +192,7 @@ export class GhostScene {
     this.#ground.geometry.dispose();
     this.#groundMaterial.dispose();
     this.#renderer.dispose();
+    this.#label.remove();
     canvas.remove();
   }
 
@@ -202,7 +228,20 @@ export class GhostScene {
     }
     this.#model = model;
     this.#currentRoot.add(model);
+    this.#measureLabelOffset();
     this.#rebuildGhost();
+  }
+
+  setTimeLabel(label: { text: string; position: Vec3 } | undefined): void {
+    if (!label) {
+      this.#labelActive = false;
+      this.#syncLabel();
+      return;
+    }
+    this.#labelActive = true;
+    this.#labelText = label.text;
+    this.#labelAnchor.set(label.position[0], label.position[1], label.position[2]);
+    this.#syncLabel();
   }
 
   setGhostAppearance(appearance: GhostAppearance): void {
@@ -241,6 +280,7 @@ export class GhostScene {
   setPath(path: {
     points: Float32Array;
     times: Float64Array;
+    receiveTimes: readonly ReceiveTime[];
     color: string;
     visibility: "shown" | "hidden";
   }): void {
@@ -254,10 +294,12 @@ export class GhostScene {
     this.#pathKey = key;
     this.#pathPoints = [];
     this.#pathTimes = [];
+    this.#receiveTimes = [];
     if (path.visibility === "shown") {
       for (let index = 0; index < count; index += 1) {
         const time = path.times[index];
-        if (time == undefined) {
+        const receiveTime = path.receiveTimes[index];
+        if (time == undefined || !receiveTime) {
           continue;
         }
         this.#pathPoints.push(
@@ -268,9 +310,11 @@ export class GhostScene {
           ),
         );
         this.#pathTimes.push(time);
+        this.#receiveTimes.push(receiveTime);
       }
     }
-    this.#pathLine = this.#replaceFatLine(this.#pathLine, this.#pathPoints, path.color, 8, 0.15);
+    this.#fitGround(this.#pathPoints);
+    this.#pathLine = this.#syncFatLine(this.#pathLine, this.#pathPoints, path.color, 8, 0.15);
     this.#requestRender();
   }
 
@@ -280,7 +324,7 @@ export class GhostScene {
         return;
       }
       this.#highlightKey = "";
-      this.#highlightLine = this.#replaceFatLine(this.#highlightLine, [], highlight?.color ?? "#ffffff", 8, 0.2);
+      this.#highlightLine = this.#syncFatLine(this.#highlightLine, [], highlight?.color ?? "#ffffff", 11, 0.22);
       this.#requestRender();
       return;
     }
@@ -302,7 +346,7 @@ export class GhostScene {
       );
     }
     const color = lighten(highlight.color);
-    this.#highlightLine = this.#replaceFatLine(this.#highlightLine, points, color, 8, 0.22);
+    this.#highlightLine = this.#syncFatLine(this.#highlightLine, points, color, 11, 0.22);
     this.#requestRender();
   }
 
@@ -369,7 +413,8 @@ export class GhostScene {
     this.#groundMaterial.color.set(dark ? 0x2a3036 : 0xc5ced6);
     this.#hemi.color.set(dark ? 0x8aa0b8 : 0xf4f7fb);
     this.#hemi.groundColor.set(dark ? 0x3a332c : 0x8a8178);
-    this.#hemi.intensity = dark ? 0.65 : 0.92;
+    this.#hemi.intensity = dark ? 1.35 : 0.92;
+    this.#sun.intensity = dark ? 2.15 : 1.35;
     this.#rebuildGrid();
   }
 
@@ -379,9 +424,14 @@ export class GhostScene {
       return;
     }
     const dark = this.#scheme === "dark";
-    const grid = new GridHelper(180, 36, dark ? 0x3d4852 : 0xb7c2cc, dark ? 0x2a3138 : 0xc9d1d8);
+    const grid = new GridHelper(
+      this.#gridSize,
+      36,
+      dark ? 0x51606c : 0xb7c2cc,
+      dark ? 0x3a444e : 0xc9d1d8,
+    );
     grid.rotation.x = Math.PI / 2;
-    grid.position.z = 0.02;
+    grid.position.set(this.#anchor.x, this.#anchor.y, this.#anchor.z + 0.02);
     this.#scene.add(grid);
     this.#grid = grid;
   }
@@ -434,31 +484,88 @@ export class GhostScene {
     this.#controls.update();
   }
 
-  #replaceFatLine(
+  #fitGround(points: readonly Vector3[]): void {
+    if (points.length === 0) {
+      return;
+    }
+    let minX = Infinity;
+    let minY = Infinity;
+    let minZ = Infinity;
+    let maxX = -Infinity;
+    let maxY = -Infinity;
+    for (const point of points) {
+      minX = Math.min(minX, point.x);
+      minY = Math.min(minY, point.y);
+      minZ = Math.min(minZ, point.z);
+      maxX = Math.max(maxX, point.x);
+      maxY = Math.max(maxY, point.y);
+    }
+    const span = Math.max(maxX - minX, maxY - minY, 40);
+    this.#gridSize = Math.max(span * 1.5, 80);
+    this.#anchor.set((minX + maxX) / 2, (minY + maxY) / 2, minZ);
+    this.#ground.geometry.dispose();
+    this.#ground.geometry = new PlaneGeometry(this.#gridSize, this.#gridSize);
+    this.#ground.position.set(this.#anchor.x, this.#anchor.y, minZ - 0.02);
+    this.#rebuildGrid();
+  }
+
+  #measureLabelOffset(): void {
+    if (!this.#model) {
+      this.#labelZOffset = 1;
+      return;
+    }
+    const bounds = new Box3().setFromObject(this.#model);
+    const height = bounds.max.z - bounds.min.z;
+    this.#labelZOffset = (Number.isFinite(height) && height > 0 ? height : 1) + 0.35;
+  }
+
+  #syncLabel(): void {
+    if (!this.#labelActive) {
+      this.#label.style.display = "none";
+      return;
+    }
+    const point = this.projectToOverlay(
+      [this.#labelAnchor.x, this.#labelAnchor.y, this.#labelAnchor.z],
+      this.#labelZOffset,
+    );
+    if (!point) {
+      this.#label.style.display = "none";
+      return;
+    }
+    this.#label.style.display = "block";
+    this.#label.style.left = `${point.x}px`;
+    this.#label.style.top = `${point.y}px`;
+    this.#label.textContent = this.#labelText;
+  }
+
+  #syncFatLine(
     current: FatLine | undefined,
     points: readonly Vector3[],
     color: string,
     width: number,
     lift: number,
   ): FatLine | undefined {
-    this.#removeFatLine(current);
     if (points.length < 2) {
+      this.#removeFatLine(current);
       return undefined;
     }
-    const positions = new Float32Array(points.length * 3);
-    for (let index = 0; index < points.length; index += 1) {
-      const point = points[index];
-      if (!point) {
-        continue;
-      }
-      positions[index * 3] = point.x;
-      positions[index * 3 + 1] = point.y;
-      positions[index * 3 + 2] = point.z + lift;
+    const positions = linePositions(points, lift);
+    const hex = safeHex(color);
+    if (current && writeLinePositions(current.geometry, positions)) {
+      current.material.color.set(hex);
+      current.material.linewidth = width;
+      return current;
+    }
+    if (current) {
+      current.geometry.setPositions(positions);
+      current.material.color.set(hex);
+      current.material.linewidth = width;
+      return current;
     }
     const geometry = new LineGeometry();
     geometry.setPositions(positions);
     const material = new LineMaterial({
-      color: safeHex(color),
+      color: hex,
       linewidth: width,
       transparent: true,
       opacity: 1,
@@ -523,6 +630,7 @@ export class GhostScene {
     const moving = this.#controls.update();
     if (this.#dirty || moving) {
       this.#renderer.render(this.#scene, this.#camera);
+      this.#syncLabel();
       this.#dirty = false;
     }
     if (moving || this.#interacting) {
@@ -558,9 +666,10 @@ export class GhostScene {
     if (event.button !== 0 || button !== 0 || moved > 5) {
       return;
     }
-    const time = this.#pickTime(event.clientX, event.clientY);
-    if (time != undefined) {
-      this.#handlers.onSeek(time);
+    const index = this.#pickIndex(event.clientX, event.clientY);
+    const receiveTime = index == undefined ? undefined : this.#receiveTimes[index];
+    if (receiveTime) {
+      this.#handlers.onSeek(receiveTime);
     }
   };
 
@@ -568,7 +677,8 @@ export class GhostScene {
     if (event.buttons !== 0) {
       return;
     }
-    this.#emitHover(this.#pickTime(event.clientX, event.clientY));
+    const index = this.#pickIndex(event.clientX, event.clientY);
+    this.#emitHover(index == undefined ? undefined : this.#pathTimes[index]);
   };
 
   #onPointerLeave = (): void => {
@@ -583,7 +693,7 @@ export class GhostScene {
     this.#handlers.onPreviewTime(time);
   }
 
-  #pickTime(clientX: number, clientY: number): number | undefined {
+  #pickIndex(clientX: number, clientY: number): number | undefined {
     const rect = this.#renderer.domElement.getBoundingClientRect();
     if (rect.width <= 0 || rect.height <= 0 || this.#pathPoints.length === 0) {
       return undefined;
@@ -592,11 +702,10 @@ export class GhostScene {
     const y = clientY - rect.top;
     this.#camera.getWorldDirection(this.#forward);
     let best = 20;
-    let bestTime: number | undefined;
+    let bestIndex: number | undefined;
     for (let index = 0; index < this.#pathPoints.length; index += 1) {
       const point = this.#pathPoints[index];
-      const time = this.#pathTimes[index];
-      if (!point || time == undefined) {
+      if (!point) {
         continue;
       }
       this.#scratch.copy(point).sub(this.#camera.position);
@@ -609,10 +718,10 @@ export class GhostScene {
       const distance = Math.hypot(sx - x, sy - y);
       if (distance < best) {
         best = distance;
-        bestTime = time;
+        bestIndex = index;
       }
     }
-    return bestTime;
+    return bestIndex;
   }
 }
 
@@ -621,36 +730,53 @@ function applyPose(object: Object3D, pose: ScenePose): void {
   object.quaternion.set(pose.orientation[0], pose.orientation[1], pose.orientation[2], pose.orientation[3]);
 }
 
-function disposeObjectTree(root: Object3D): void {
+export function disposeObjectTree(root: Object3D): void {
   const geometries = new Set<BufferGeometry>();
   const materials = new Set<Material>();
+  const textures = new Set<Texture>();
   root.traverse((obj) => {
-    const mesh = concreteMesh(obj);
-    if (!mesh) {
+    const drawable = drawableObject(obj);
+    if (!drawable) {
       return;
     }
-    geometries.add(mesh.geometry);
-    collectMaterials(mesh.material, materials);
+    geometries.add(drawable.geometry);
+    collectMaterials(drawable.material, materials);
   });
   for (const geometry of geometries) {
     geometry.dispose();
   }
   for (const material of materials) {
-    if (
-      (material instanceof MeshStandardMaterial || material instanceof MeshBasicMaterial) &&
-      material.map
-    ) {
-      material.map.dispose();
-    }
+    collectTextures(material, textures);
     material.dispose();
+  }
+  for (const texture of textures) {
+    texture.dispose();
   }
 }
 
-function concreteMesh(obj: Object3D): Mesh | undefined {
-  if (!(obj instanceof Mesh)) {
-    return undefined;
+function drawableObject(
+  obj: Object3D,
+): { geometry: BufferGeometry; material: Material | Material[] } | undefined {
+  if (obj instanceof Mesh) {
+    return obj as Mesh;
   }
-  return obj as Mesh;
+  if (obj instanceof Line) {
+    return obj as Line;
+  }
+  if (obj instanceof Points) {
+    return obj as Points;
+  }
+  return undefined;
+}
+
+function collectTextures(material: Material, into: Set<Texture>): void {
+  const record = material as unknown as Record<string, unknown>;
+  for (const key of Object.keys(record)) {
+    const value = record[key];
+    if (value instanceof Texture) {
+      into.add(value);
+    }
+  }
 }
 
 function collectMaterials(material: Material | Material[], into: Set<Material>): void {
@@ -675,6 +801,49 @@ function disposeMaterial(material: Material | readonly Material[]): void {
 
 function isMaterialList(value: Material | readonly Material[]): value is readonly Material[] {
   return Object.prototype.toString.call(value) === "[object Array]";
+}
+
+function linePositions(points: readonly Vector3[], lift: number): Float32Array {
+  const positions = new Float32Array(points.length * 3);
+  for (let index = 0; index < points.length; index += 1) {
+    const point = points[index];
+    if (!point) {
+      continue;
+    }
+    positions[index * 3] = point.x;
+    positions[index * 3 + 1] = point.y;
+    positions[index * 3 + 2] = point.z + lift;
+  }
+  return positions;
+}
+
+function writeLinePositions(geometry: LineGeometry, positions: Float32Array): boolean {
+  const attribute = geometry.getAttribute("instanceStart");
+  if (positions.length < 6) {
+    return false;
+  }
+  const segments = positions.length / 3 - 1;
+  if (attribute.count !== segments) {
+    return false;
+  }
+  const array = attribute.array;
+  if (!(array instanceof Float32Array) || array.length < segments * 6) {
+    return false;
+  }
+  let write = 0;
+  for (let index = 0; index < positions.length - 3; index += 3) {
+    array[write] = positions[index] ?? 0;
+    array[write + 1] = positions[index + 1] ?? 0;
+    array[write + 2] = positions[index + 2] ?? 0;
+    array[write + 3] = positions[index + 3] ?? 0;
+    array[write + 4] = positions[index + 4] ?? 0;
+    array[write + 5] = positions[index + 5] ?? 0;
+    write += 6;
+  }
+  attribute.needsUpdate = true;
+  geometry.computeBoundingBox();
+  geometry.computeBoundingSphere();
+  return true;
 }
 
 function lighten(color: string): string {

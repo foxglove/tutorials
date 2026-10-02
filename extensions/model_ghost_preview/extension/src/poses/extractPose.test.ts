@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { extractPose, isSupportedSchema, schemaUsesChildFrame } from "./extractPose";
+import { ChildFrameLock, extractPose, isSupportedSchema, schemaUsesChildFrame } from "./extractPose";
 
 const position = { x: 1, y: 2, z: 3 };
 const orientation = { x: 0, y: 0, z: 0, w: 1 };
@@ -53,6 +53,52 @@ describe("extractPose", () => {
       extractPose("foxglove.FrameTransform", transforms.transforms[0], { childFrameId: "truck" }),
     ).toBeUndefined();
     expect(extractPose("foxglove.FrameTransform", transforms.transforms[1])?.frameId).toBe("map");
+  });
+
+  it("locks an empty child frame filter onto the first child id in the range", () => {
+    const lock = new ChildFrameLock();
+    const base = {
+      parent_frame_id: "map",
+      child_frame_id: "base",
+      translation: { x: 4, y: 0, z: 0 },
+      rotation: orientation,
+    };
+    const truck = {
+      parent_frame_id: "map",
+      child_frame_id: "truck",
+      translation: position,
+      rotation: orientation,
+    };
+    expect(
+      extractPose("foxglove.FrameTransforms", { transforms: [base, truck] }, { childFrameLock: lock })
+        ?.position,
+    ).toEqual([4, 0, 0]);
+    expect(
+      extractPose("foxglove.FrameTransforms", { transforms: [truck, base] }, { childFrameLock: lock })
+        ?.position,
+    ).toEqual([4, 0, 0]);
+    expect(lock.observed()).toEqual(["base", "truck"]);
+    lock.reset();
+    expect(lock.observed()).toEqual([]);
+    expect(
+      extractPose("foxglove.FrameTransforms", { transforms: [truck, base] }, { childFrameLock: lock })
+        ?.position,
+    ).toEqual([1, 2, 3]);
+    expect(
+      extractPose(
+        "tf2_msgs/TFMessage",
+        {
+          transforms: [
+            {
+              header: { frame_id: "map" },
+              child_frame_id: "base",
+              transform: { translation: { x: 8, y: 0, z: 0 }, rotation: orientation },
+            },
+          ],
+        },
+        { childFrameLock: lock },
+      ),
+    ).toBeUndefined();
   });
 
   it("reads geometry_msgs PoseStamped, including the /msg form", () => {

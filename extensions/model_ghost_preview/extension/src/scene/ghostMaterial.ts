@@ -14,6 +14,7 @@ import {
 import { LineMaterial } from "three/examples/jsm/lines/LineMaterial.js";
 import { LineSegments2 } from "three/examples/jsm/lines/LineSegments2.js";
 import { LineSegmentsGeometry } from "three/examples/jsm/lines/LineSegmentsGeometry.js";
+import { clone as cloneSkinned } from "three/examples/jsm/utils/SkeletonUtils.js";
 
 import type { GhostStyle } from "../settings";
 
@@ -34,7 +35,7 @@ export function buildGhostObject(
   appearance: GhostAppearance,
   resolution: { width: number; height: number },
 ): GhostObject {
-  const clone = source.clone(true);
+  const clone = cloneSkinned(source);
   const materials: Material[] = [];
   const geometries: BufferGeometry[] = [];
   const lineMaterials: LineMaterial[] = [];

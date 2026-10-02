@@ -1,6 +1,6 @@
 {
   "configById": {
-    "model-ghost-preview.Model Ghost Preview!ghost": {
+    "Model Ghost Preview.Model Ghost Preview!ghost": {
       "general": {
         "poseTopic": "/truck/pose",
         "childFrameId": "",
@@ -85,7 +85,7 @@
   },
   "layout": {
     "direction": "row",
-    "first": "model-ghost-preview.Model Ghost Preview!ghost",
+    "first": "Model Ghost Preview.Model Ghost Preview!ghost",
     "second": {
       "direction": "column",
       "first": "3D!scene",

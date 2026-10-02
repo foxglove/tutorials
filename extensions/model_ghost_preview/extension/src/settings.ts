@@ -111,9 +111,10 @@ export function reduceConfig(config: GhostPreviewConfig, action: SettingsTreeAct
 export function buildSettingsTree(args: {
   config: GhostPreviewConfig;
   topics: readonly TopicInfo[];
+  childFrameIds: readonly string[];
   actionHandler: (action: SettingsTreeAction) => void;
 }): SettingsTree {
-  const { config, topics, actionHandler } = args;
+  const { config, topics, childFrameIds, actionHandler } = args;
   const supported = topics.filter((topic) => isSupportedSchema(topic.schemaName));
   const options = supported.map((topic) => ({ label: topic.name, value: topic.name }));
   if (config.general.poseTopic.length > 0 && !options.some((option) => option.value === config.general.poseTopic)) {
@@ -152,10 +153,11 @@ export function buildSettingsTree(args: {
         ? {
             childFrameId: {
               label: "Child frame",
-              input: "string" as const,
+              input: "autocomplete" as const,
               value: config.general.childFrameId,
-              placeholder: "first transform",
-              help: "Matches child_frame_id. Leave empty to use the first transform.",
+              items: [...childFrameIds],
+              placeholder: "first child frame",
+              help: "Matches child_frame_id. Empty locks onto the first child frame in the range.",
             },
           }
         : {}),
@@ -192,9 +194,9 @@ export function buildSettingsTree(args: {
         step: 0.1,
         precision: 3,
       },
-      yaw: numberField("Yaw", config.model.yaw, "deg"),
-      pitch: numberField("Pitch", config.model.pitch, "deg"),
-      roll: numberField("Roll", config.model.roll, "deg"),
+      yaw: numberField("Yaw (deg)", config.model.yaw),
+      pitch: numberField("Pitch (deg)", config.model.pitch),
+      roll: numberField("Roll (deg)", config.model.roll),
       truckColor: {
         label: "Truck color",
         input: "rgb",
@@ -250,7 +252,7 @@ export function buildSettingsTree(args: {
         label: "Highlight segment",
         input: "boolean",
         value: config.path.highlightSegment,
-        help: "Brighten the path between the current time and the preview time.",
+        help: "Draw a brighter, thicker path between the current time and the preview time.",
       },
     },
   };
@@ -285,15 +287,17 @@ export function buildSettingsTree(args: {
   };
 }
 
-function numberField(label: string, value: number, suffix: string): {
+function numberField(
+  label: string,
+  value: number,
+): {
   label: string;
   input: "number";
   value: number;
   step: number;
   precision: number;
-  placeholder: string;
 } {
-  return { label, input: "number", value, step: 1, precision: 1, placeholder: suffix };
+  return { label, input: "number", value, step: 1, precision: 1 };
 }
 
 function applyUpdate(

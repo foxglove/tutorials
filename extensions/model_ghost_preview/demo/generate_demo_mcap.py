@@ -1,20 +1,13 @@
 #!/usr/bin/env python3
-"""Write a short haul-road MCAP for the Model Ghost Preview panel.
-
-foxglove-sdk 0.28 deprecates ``foxglove.schemas`` in favor of ``foxglove.messages``.
-The names below are the same classes; the schemas import is what this tutorial documents.
-"""
+"""Write a short haul-road MCAP for the Model Ghost Preview panel."""
 
 import argparse
 import math
-import warnings
 from pathlib import Path
-
-warnings.filterwarnings("ignore", message="foxglove.schemas is deprecated")
 
 import foxglove
 from foxglove.channels import FrameTransformsChannel, PoseInFrameChannel, SceneUpdateChannel
-from foxglove.schemas import (
+from foxglove.messages import (
     Color,
     CubePrimitive,
     FrameTransform,
@@ -96,7 +89,7 @@ def sample_pose(t_sec: float, duration: float) -> dict[str, float]:
     dz = 6.0 * ds + 1.5 * math.pi * 2.0 * ds * math.cos(s * math.pi * 2.0)
     yaw = math.atan2(dy, dx)
     pitch = math.atan2(dz, math.hypot(dx, dy))
-    qx, qy, qz, qw = heading_quaternion(yaw, pitch)
+    qx, qy, qz, qw = heading_quaternion(yaw, -pitch)
     return {
         "time_sec": EPOCH_SEC + t_sec,
         "x": x,

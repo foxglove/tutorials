@@ -9,7 +9,39 @@ export type PoseSample = {
 
 export type ExtractPoseOptions = {
   childFrameId?: string;
+  childFrameLock?: ChildFrameLock;
 };
+
+export class ChildFrameLock {
+  #locked: string | undefined;
+  #seen: string[] = [];
+
+  reset(): void {
+    this.#locked = undefined;
+    this.#seen = [];
+  }
+
+  observed(): readonly string[] {
+    return this.#seen;
+  }
+
+  accept(actual: string | undefined, wanted: string | undefined): boolean {
+    if (actual != undefined && actual.length > 0 && !this.#seen.includes(actual)) {
+      this.#seen.push(actual);
+    }
+    if (wanted != undefined && wanted.length > 0) {
+      return actual === wanted;
+    }
+    if (this.#locked == undefined) {
+      if (actual == undefined || actual.length === 0) {
+        return true;
+      }
+      this.#locked = actual;
+      return true;
+    }
+    return actual === this.#locked;
+  }
+}
 
 const POSE_IN_FRAME = "foxglove.PoseInFrame";
 const POSES_IN_FRAME = "foxglove.PosesInFrame";
@@ -66,6 +98,7 @@ export function extractPose(
     return undefined;
   }
   const childFrameId = options?.childFrameId;
+  const childFrameLock = options?.childFrameLock;
   switch (schemaName) {
     case POSE_IN_FRAME:
       return poseSample(parsePose(record["pose"]), readString(record["frame_id"]));
@@ -75,9 +108,9 @@ export function extractPose(
       return poseSample(parsePose(first), readString(record["frame_id"]));
     }
     case FRAME_TRANSFORM:
-      return fromFoxgloveTransform(record, childFrameId);
+      return fromFoxgloveTransform(record, childFrameId, childFrameLock);
     case FRAME_TRANSFORMS:
-      return firstMatching(asArray(record["transforms"]), childFrameId, fromFoxgloveTransform);
+      return firstMatching(asArray(record["transforms"]), childFrameId, childFrameLock, fromFoxgloveTransform);
     default:
       break;
   }
@@ -89,10 +122,10 @@ export function extractPose(
     return poseSample(parsePose(poseWithCov?.["pose"]), headerFrameId(record["header"]));
   }
   if (TF_MESSAGE.has(schemaName)) {
-    return firstMatching(asArray(record["transforms"]), childFrameId, fromRosTransform);
+    return firstMatching(asArray(record["transforms"]), childFrameId, childFrameLock, fromRosTransform);
   }
   if (TRANSFORM_STAMPED.has(schemaName)) {
-    return fromRosTransform(record, childFrameId);
+    return fromRosTransform(record, childFrameId, childFrameLock);
   }
   return undefined;
 }
@@ -110,13 +143,14 @@ function poseSample(
 function fromFoxgloveTransform(
   message: unknown,
   childFrameId: string | undefined,
+  childFrameLock: ChildFrameLock | undefined,
 ): PoseSample | undefined {
   const record = asRecord(message);
   if (!record) {
     return undefined;
   }
   const child = readString(record["child_frame_id"]);
-  if (!childFrameMatches(child, childFrameId)) {
+  if (!childFrameMatches(child, childFrameId, childFrameLock)) {
     return undefined;
   }
   const position = parseVec3(record["translation"]);
@@ -127,13 +161,17 @@ function fromFoxgloveTransform(
   return { position, orientation, frameId: readString(record["parent_frame_id"]) };
 }
 
-function fromRosTransform(message: unknown, childFrameId: string | undefined): PoseSample | undefined {
+function fromRosTransform(
+  message: unknown,
+  childFrameId: string | undefined,
+  childFrameLock: ChildFrameLock | undefined,
+): PoseSample | undefined {
   const record = asRecord(message);
   if (!record) {
     return undefined;
   }
   const child = readString(record["child_frame_id"]);
-  if (!childFrameMatches(child, childFrameId)) {
+  if (!childFrameMatches(child, childFrameId, childFrameLock)) {
     return undefined;
   }
   const transform = asRecord(record["transform"]);
@@ -151,13 +189,18 @@ function fromRosTransform(message: unknown, childFrameId: string | undefined): P
 function firstMatching(
   items: readonly unknown[] | undefined,
   childFrameId: string | undefined,
-  read: (message: unknown, childFrameId: string | undefined) => PoseSample | undefined,
+  childFrameLock: ChildFrameLock | undefined,
+  read: (
+    message: unknown,
+    childFrameId: string | undefined,
+    childFrameLock: ChildFrameLock | undefined,
+  ) => PoseSample | undefined,
 ): PoseSample | undefined {
   if (!items) {
     return undefined;
   }
   for (const item of items) {
-    const pose = read(item, childFrameId);
+    const pose = read(item, childFrameId, childFrameLock);
     if (pose) {
       return pose;
     }
@@ -165,7 +208,14 @@ function firstMatching(
   return undefined;
 }
 
-function childFrameMatches(actual: string | undefined, wanted: string | undefined): boolean {
+function childFrameMatches(
+  actual: string | undefined,
+  wanted: string | undefined,
+  childFrameLock: ChildFrameLock | undefined,
+): boolean {
+  if (childFrameLock) {
+    return childFrameLock.accept(actual, wanted);
+  }
   if (wanted == undefined || wanted.length === 0) {
     return true;
   }

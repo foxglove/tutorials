@@ -93,4 +93,28 @@ describe("PoseTimeline", () => {
     expect(Array.from(timeline.pathSlice(5, 15))).toEqual([5, 0, 0, 10, 0, 0, 15, 0, 0]);
     expect(timeline.pathSlice(-5, -1).length).toBe(0);
   });
+
+  it("ends a previous-mode slice on the previous sample", () => {
+    const timeline = new PoseTimeline();
+    timeline.insert(pose(0, [0, 0, 0]));
+    timeline.insert(pose(10, [10, 0, 0]));
+    timeline.insert(pose(20, [20, 0, 0]));
+    expect(Array.from(timeline.pathSlice(5, 15, "previous"))).toEqual([0, 0, 0, 10, 0, 0]);
+  });
+
+  it("rebases the path to the first pose before narrowing to float32", () => {
+    const timeline = new PoseTimeline();
+    const easting = 500_000.25;
+    const northing = 4_000_000.5;
+    timeline.insert(pose(0, [easting, northing, 12]));
+    timeline.insert(pose(1, [easting + 4, northing - 2, 12.5]));
+    const path = timeline.path();
+    expect(path[0]).toBe(0);
+    expect(path[1]).toBe(0);
+    expect(path[2]).toBe(0);
+    expect(path[3]).toBeCloseTo(4, 4);
+    expect(path[4]).toBeCloseTo(-2, 4);
+    expect(path[5]).toBeCloseTo(0.5, 4);
+    expect(timeline.sample(1, "previous")?.position[0]).toBe(easting + 4);
+  });
 });
