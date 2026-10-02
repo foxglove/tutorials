@@ -108,7 +108,9 @@ const messages = buildMessages();
 function createContext(panelElement: HTMLDivElement): PanelExtensionContext {
   const start = { sec: EPOCH, nsec: 0 };
   const end = { sec: EPOCH + DURATION, nsec: 0 };
-  let current = EPOCH + 8;
+  const requestedText = new URLSearchParams(window.location.search).get("t");
+  const requested = requestedText == null ? Number.NaN : Number(requestedText);
+  let current = EPOCH + (Number.isFinite(requested) ? Math.min(DURATION, Math.max(0, requested)) : 8);
   let preview: number | undefined;
   let playing = false;
   let rendering = false;

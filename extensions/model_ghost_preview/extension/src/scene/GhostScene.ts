@@ -73,7 +73,10 @@ export class GhostScene {
   #pathPoints: Vector3[] = [];
   #pathTimes: number[] = [];
   #receiveTimes: ReceiveTime[] = [];
-  #pathKey = "";
+  #pathPointsRef: Float32Array | undefined;
+  #pathTimesRef: Float64Array | undefined;
+  #pathColor = "";
+  #pathVisibility = "";
   #anchor = new Vector3();
   #gridSize = 180;
   #label: HTMLDivElement;
@@ -149,8 +152,14 @@ export class GhostScene {
     this.#scene.add(this.#sun);
     this.#scene.add(this.#sun.target);
 
-    this.#groundMaterial = new MeshStandardMaterial({ color: 0xc5ced6, roughness: 1, metalness: 0 });
+    this.#groundMaterial = new MeshStandardMaterial({
+      color: 0xc5ced6,
+      roughness: 1,
+      metalness: 0,
+      depthWrite: false,
+    });
     this.#ground = new Mesh(new PlaneGeometry(400, 400), this.#groundMaterial);
+    this.#ground.renderOrder = -1;
     this.#ground.receiveShadow = true;
     this.#scene.add(this.#ground);
     this.#scene.add(this.#currentRoot);
@@ -287,12 +296,19 @@ export class GhostScene {
     color: string;
     visibility: "shown" | "hidden";
   }): void {
-    const count = Math.min(path.times.length, Math.floor(path.points.length / 3));
-    const key = `${path.visibility}:${path.color}:${count}:${hashSeries(path.points)}:${hashSeries(path.times)}`;
-    if (key === this.#pathKey) {
+    if (
+      path.points === this.#pathPointsRef &&
+      path.times === this.#pathTimesRef &&
+      path.color === this.#pathColor &&
+      path.visibility === this.#pathVisibility
+    ) {
       return;
     }
-    this.#pathKey = key;
+    this.#pathPointsRef = path.points;
+    this.#pathTimesRef = path.times;
+    this.#pathColor = path.color;
+    this.#pathVisibility = path.visibility;
+    const count = Math.min(path.times.length, Math.floor(path.points.length / 3));
     this.#pathPoints = [];
     this.#pathTimes = [];
     this.#receiveTimes = [];
@@ -567,9 +583,12 @@ export class GhostScene {
       this.#label.style.display = "none";
       return;
     }
+    const pad = 28;
+    const x = Math.min(Math.max(point.x, pad), Math.max(this.#width - pad, pad));
+    const y = Math.min(Math.max(point.y, pad), Math.max(this.#height - pad, pad));
     this.#label.style.display = "block";
-    this.#label.style.left = `${point.x}px`;
-    this.#label.style.top = `${point.y}px`;
+    this.#label.style.left = `${x}px`;
+    this.#label.style.top = `${y}px`;
     this.#label.textContent = this.#labelText;
   }
 
@@ -830,14 +849,6 @@ function disposeMaterial(material: Material | readonly Material[]): void {
 
 function isMaterialList(value: Material | readonly Material[]): value is readonly Material[] {
   return Object.prototype.toString.call(value) === "[object Array]";
-}
-
-function hashSeries(values: Iterable<number>): number {
-  let hash = 0;
-  for (const value of values) {
-    hash = (hash * 31 + Math.round(value * 1000)) % 1000000007;
-  }
-  return hash;
 }
 
 function linePositions(points: readonly Vector3[], lift: number): Float32Array {
