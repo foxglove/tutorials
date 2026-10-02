@@ -73,11 +73,14 @@ describe("extractPose", () => {
       extractPose("foxglove.FrameTransforms", { transforms: [base, truck] }, { childFrameLock: lock })
         ?.position,
     ).toEqual([4, 0, 0]);
+    expect(lock.observed()).toEqual(["base", "truck"]);
     expect(
       extractPose("foxglove.FrameTransforms", { transforms: [truck, base] }, { childFrameLock: lock })
         ?.position,
     ).toEqual([4, 0, 0]);
-    expect(lock.observed()).toEqual(["base", "truck"]);
+    const seen = lock.observed();
+    expect(seen).toEqual(["base", "truck"]);
+    expect(seen).not.toBe(lock.observed());
     lock.reset();
     expect(lock.observed()).toEqual([]);
     expect(

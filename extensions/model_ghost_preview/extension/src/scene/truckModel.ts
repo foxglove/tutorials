@@ -32,22 +32,48 @@ export function createTruckModel(bodyColor: string): Group {
   const wheelGeo = new CylinderGeometry(1.1, 1.1, 0.86, 20);
   const hubGeo = new CylinderGeometry(0.42, 0.42, 0.98, 12);
 
-  add(root, { name: "chassis", geometry: box(7.0, 1.5, 0.45), material: dark, position: [0.3, 0, 1.25] });
+  add(root, { name: "chassis", geometry: box(7.0, 1.4, 0.42), material: dark, position: [0.3, 0, 1.15] });
+  add(root, { name: "frame", geometry: box(6.4, 1.2, 1.22), material: dark, position: [0.15, 0, 1.7] });
+  add(root, {
+    name: "axle",
+    geometry: new CylinderGeometry(0.35, 0.35, 2.76, 16),
+    material: dark,
+    position: [3.2, 0, 1.1],
+  });
+  add(root, {
+    name: "axle",
+    geometry: new CylinderGeometry(0.35, 0.35, 1.76, 16),
+    material: dark,
+    position: [-1.3, 0, 1.1],
+  });
+  add(root, {
+    name: "hoist",
+    geometry: new CylinderGeometry(0.16, 0.16, 0.4, 12),
+    material: dark,
+    position: [-0.35, 0.42, 2.28],
+    rotation: [Math.PI / 2, 0, 0],
+  });
+  add(root, {
+    name: "hoist",
+    geometry: new CylinderGeometry(0.16, 0.16, 0.4, 12),
+    material: dark,
+    position: [-0.35, -0.42, 2.28],
+    rotation: [Math.PI / 2, 0, 0],
+  });
   add(root, { name: "deck", geometry: box(2.5, 3.3, 0.16), material: dark, position: [3.25, 0, 2.42] });
-  add(root, { name: "bed-floor", geometry: box(5.5, 3.45, 0.16), material: bed, position: [-0.55, 0, 2.48] });
-  add(root, { name: "bed-wall", geometry: box(5.5, 0.12, 1.35), material: body, position: [-0.55, 1.72, 3.22] });
-  add(root, { name: "bed-wall", geometry: box(5.5, 0.12, 1.35), material: body, position: [-0.55, -1.72, 3.22] });
-  add(root, { name: "tailgate", geometry: box(0.14, 3.45, 1.2), material: body, position: [-3.25, 0, 3.15] });
-  add(root, { name: "headboard", geometry: box(0.16, 3.45, 1.9), material: body, position: [2.15, 0, 3.5] });
+  add(root, { name: "bed-floor", geometry: box(5.5, 5.6, 0.16), material: bed, position: [-0.55, 0, 2.48] });
+  add(root, { name: "bed-wall", geometry: box(5.5, 0.16, 1.35), material: body, position: [-0.55, 2.72, 3.22] });
+  add(root, { name: "bed-wall", geometry: box(5.5, 0.16, 1.35), material: body, position: [-0.55, -2.72, 3.22] });
+  add(root, { name: "tailgate", geometry: box(0.14, 5.6, 1.25), material: body, position: [-3.25, 0, 3.15] });
+  add(root, { name: "headboard", geometry: box(0.18, 5.6, 2.05), material: body, position: [2.16, 0, 3.48] });
   add(root, {
     name: "canopy",
-    geometry: box(2.15, 3.35, 0.12),
+    geometry: box(2.3, 5.6, 0.14),
     material: body,
-    position: [3.05, 0, 4.35],
-    rotation: [0, -0.55, 0],
+    position: [3.25, 0, 4.42],
   });
-  add(root, { name: "rail", geometry: box(5.2, 0.08, 0.08), material: dark, position: [-0.55, 1.72, 3.95] });
-  add(root, { name: "rail", geometry: box(5.2, 0.08, 0.08), material: dark, position: [-0.55, -1.72, 3.95] });
+  add(root, { name: "rail", geometry: box(5.2, 0.08, 0.08), material: dark, position: [-0.55, 2.72, 3.95] });
+  add(root, { name: "rail", geometry: box(5.2, 0.08, 0.08), material: dark, position: [-0.55, -2.72, 3.95] });
 
   add(root, { name: "cab", geometry: box(1.45, 1.25, 1.3), material: body, position: [3.15, 0.72, 3.15] });
   add(root, { name: "cab-roof", geometry: box(1.6, 1.4, 0.1), material: body, position: [3.1, 0.72, 3.85] });

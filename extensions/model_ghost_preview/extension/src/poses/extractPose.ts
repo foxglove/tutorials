@@ -22,13 +22,17 @@ export class ChildFrameLock {
   }
 
   observed(): readonly string[] {
-    return this.#seen;
+    return this.#seen.slice();
   }
 
-  accept(actual: string | undefined, wanted: string | undefined): boolean {
+  note(actual: string | undefined): void {
     if (actual != undefined && actual.length > 0 && !this.#seen.includes(actual)) {
       this.#seen.push(actual);
     }
+  }
+
+  accept(actual: string | undefined, wanted: string | undefined): boolean {
+    this.note(actual);
     if (wanted != undefined && wanted.length > 0) {
       return actual === wanted;
     }
@@ -199,6 +203,11 @@ function firstMatching(
   if (!items) {
     return undefined;
   }
+  if (childFrameLock) {
+    for (const item of items) {
+      childFrameLock.note(readChildFrameId(item));
+    }
+  }
   for (const item of items) {
     const pose = read(item, childFrameId, childFrameLock);
     if (pose) {
@@ -206,6 +215,14 @@ function firstMatching(
     }
   }
   return undefined;
+}
+
+function readChildFrameId(message: unknown): string | undefined {
+  const record = asRecord(message);
+  if (!record) {
+    return undefined;
+  }
+  return readString(record["child_frame_id"]);
 }
 
 function childFrameMatches(

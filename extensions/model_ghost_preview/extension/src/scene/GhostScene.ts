@@ -116,13 +116,12 @@ export class GhostScene {
     this.#label.style.transform = "translate(-50%, -130%)";
     this.#label.style.padding = "2px 6px";
     this.#label.style.borderRadius = "4px";
-    this.#label.style.background = "rgba(12, 32, 48, 0.8)";
-    this.#label.style.color = "#d7f3ff";
     this.#label.style.fontSize = "12px";
     this.#label.style.fontFamily = "system-ui, sans-serif";
     this.#label.style.pointerEvents = "none";
     this.#label.style.whiteSpace = "nowrap";
     this.#label.style.display = "none";
+    this.#styleLabel();
     container.appendChild(this.#label);
 
     this.#scene = new Scene();
@@ -261,6 +260,10 @@ export class GhostScene {
     this.#currentRoot.visible = pose != undefined;
     if (pose) {
       applyPose(this.#currentRoot, pose);
+      this.#anchor.z = pose.position[2];
+      if (this.#grid) {
+        this.#grid.position.z = pose.position[2] + 0.02;
+      }
     }
     this.#applyFollow();
     this.#requestRender();
@@ -352,17 +355,24 @@ export class GhostScene {
 
   framePath(): void {
     const start = this.#pathPoints[0];
-    const near =
-      this.#pathPoints[Math.min(this.#pathPoints.length - 1, Math.floor(this.#pathPoints.length * 0.2))] ??
-      start;
-    const focusPoint =
-      this.#pathPoints[Math.min(this.#pathPoints.length - 1, Math.floor(this.#pathPoints.length * 0.4))] ??
-      near;
     const end = this.#pathPoints[this.#pathPoints.length - 1];
-    if (!start || !near || !focusPoint || !end) {
+    if (!start || !end) {
       return;
     }
-    const direction = new Vector3().subVectors(focusPoint, start);
+    const bounds = new Box3();
+    for (const point of this.#pathPoints) {
+      bounds.expandByPoint(point);
+    }
+    const focus = bounds.getCenter(new Vector3());
+    focus.z += 1.2;
+    const size = bounds.getSize(new Vector3());
+    const radius = Math.max(0.5 * Math.hypot(size.x, size.y, size.z), 12);
+    const vertical = (this.#camera.fov * Math.PI) / 180;
+    const aspect = this.#width / Math.max(this.#height, 1);
+    const horizontal = 2 * Math.atan(Math.tan(vertical / 2) * Math.max(aspect, 0.5));
+    const fitAngle = Math.min(vertical, horizontal) / 2;
+    const distance = (radius / Math.sin(fitAngle)) * 0.72;
+    const direction = new Vector3().subVectors(end, start);
     if (direction.lengthSq() < 1e-6) {
       direction.set(1, 0, 0);
     }
@@ -372,17 +382,11 @@ export class GhostScene {
       side.set(0, 1, 0);
     }
     side.normalize();
-    const span = Math.max(start.distanceTo(end), 20);
-    const focus = near.clone().lerp(focusPoint, 0.4);
-    focus.z += 1.4;
-    const back = Math.max(12, Math.min(span * 0.09, 16));
-    const lateral = Math.max(14, Math.min(span * 0.13, 18));
-    const height = Math.max(4.2, Math.min(span * 0.04, 6));
     this.#camera.position
-      .copy(near)
-      .addScaledVector(direction, -back)
-      .addScaledVector(side, -lateral)
-      .setZ(near.z + height);
+      .copy(focus)
+      .addScaledVector(direction, -distance * 0.42)
+      .addScaledVector(side, -distance * 0.72)
+      .setZ(focus.z + distance * 0.38);
     this.#controls.target.copy(focus);
     this.#controls.update();
     this.#followOffset.copy(this.#camera.position).sub(this.#controls.target);
@@ -415,7 +419,15 @@ export class GhostScene {
     this.#hemi.groundColor.set(dark ? 0x3a332c : 0x8a8178);
     this.#hemi.intensity = dark ? 1.35 : 0.92;
     this.#sun.intensity = dark ? 2.15 : 1.35;
+    this.#styleLabel();
     this.#rebuildGrid();
+  }
+
+  #styleLabel(): void {
+    const dark = this.#scheme === "dark";
+    this.#label.style.background = dark ? "rgba(236, 246, 252, 0.94)" : "rgba(12, 32, 48, 0.8)";
+    this.#label.style.color = dark ? "#102433" : "#d7f3ff";
+    this.#label.style.border = dark ? "1px solid #ffffff" : "1px solid transparent";
   }
 
   #rebuildGrid(): void {
@@ -502,10 +514,11 @@ export class GhostScene {
     }
     const span = Math.max(maxX - minX, maxY - minY, 40);
     this.#gridSize = Math.max(span * 1.5, 80);
-    this.#anchor.set((minX + maxX) / 2, (minY + maxY) / 2, minZ);
+    const poseZ = this.#currentPose?.position[2];
+    this.#anchor.set((minX + maxX) / 2, (minY + maxY) / 2, poseZ ?? minZ);
     this.#ground.geometry.dispose();
     this.#ground.geometry = new PlaneGeometry(this.#gridSize, this.#gridSize);
-    this.#ground.position.set(this.#anchor.x, this.#anchor.y, minZ - 0.02);
+    this.#ground.position.set((minX + maxX) / 2, (minY + maxY) / 2, minZ - 0.02);
     this.#rebuildGrid();
   }
 
@@ -551,19 +564,13 @@ export class GhostScene {
     }
     const positions = linePositions(points, lift);
     const hex = safeHex(color);
-    if (current && writeLinePositions(current.geometry, positions)) {
+    const geometry = lineGeometryForPositions(current?.geometry, positions);
+    if (current?.geometry === geometry) {
       current.material.color.set(hex);
       current.material.linewidth = width;
       return current;
     }
-    if (current) {
-      current.geometry.setPositions(positions);
-      current.material.color.set(hex);
-      current.material.linewidth = width;
-      return current;
-    }
-    const geometry = new LineGeometry();
-    geometry.setPositions(positions);
+    this.#removeFatLine(current);
     const material = new LineMaterial({
       color: hex,
       linewidth: width,
@@ -815,6 +822,18 @@ function linePositions(points: readonly Vector3[], lift: number): Float32Array {
     positions[index * 3 + 2] = point.z + lift;
   }
   return positions;
+}
+
+export function lineGeometryForPositions(
+  current: LineGeometry | undefined,
+  positions: Float32Array,
+): LineGeometry {
+  if (current && writeLinePositions(current, positions)) {
+    return current;
+  }
+  const created = new LineGeometry();
+  created.setPositions(positions);
+  return created;
 }
 
 function writeLinePositions(geometry: LineGeometry, positions: Float32Array): boolean {

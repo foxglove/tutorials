@@ -31,6 +31,35 @@ describe("createTruckModel", () => {
       expect(tankBox.intersectsBox(bounds)).toBe(false);
     }
   });
+
+  it("keeps the bed at least as wide as the outer duals and attaches the canopy to the headboard", () => {
+    const root = createTruckModel("#e6b422");
+    root.updateMatrixWorld(true);
+    const meshes = collectMeshes(root);
+    const bed = new Box3();
+    for (const mesh of meshes) {
+      if (mesh.name === "bed-floor" || mesh.name === "bed-wall" || mesh.name === "tailgate" || mesh.name === "headboard") {
+        bed.union(new Box3().setFromObject(mesh));
+      }
+    }
+    const tires = new Box3();
+    for (const mesh of meshes) {
+      if (mesh.name === "wheel") {
+        tires.union(new Box3().setFromObject(mesh));
+      }
+    }
+    expect(bed.max.y).toBeGreaterThanOrEqual(tires.max.y);
+    expect(bed.min.y).toBeLessThanOrEqual(tires.min.y);
+    const canopy = meshes.find((mesh) => mesh.name === "canopy");
+    const headboard = meshes.find((mesh) => mesh.name === "headboard");
+    expect(canopy).toBeDefined();
+    expect(headboard).toBeDefined();
+    if (!canopy || !headboard) {
+      return;
+    }
+    expect(Math.abs(canopy.rotation.y)).toBeLessThanOrEqual(0.05);
+    expect(new Box3().setFromObject(canopy).intersectsBox(new Box3().setFromObject(headboard))).toBe(true);
+  });
 });
 
 function collectMeshes(root: Object3D): Mesh[] {
