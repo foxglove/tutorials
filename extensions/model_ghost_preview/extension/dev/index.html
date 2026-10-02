@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Model Ghost Preview harness</title>
+    <style>
+      html,
+      body,
+      #app {
+        height: 100%;
+        margin: 0;
+      }
+      body {
+        background: #101216;
+        color: #e8eef4;
+        font-family: system-ui, sans-serif;
+      }
+      #app {
+        display: flex;
+        flex-direction: column;
+      }
+      #header {
+        height: 36px;
+        display: flex;
+        align-items: center;
+        padding: 0 12px;
+        background: #181c22;
+        font-size: 13px;
+        letter-spacing: 0.01em;
+      }
+      #panel {
+        flex: 1;
+        min-height: 0;
+        position: relative;
+      }
+      #transport {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 12px 10px;
+        background: #181c22;
+      }
+      #play {
+        width: 72px;
+        height: 28px;
+        border: 0;
+        border-radius: 4px;
+        background: #2c3642;
+        color: #f4f7fb;
+        cursor: pointer;
+      }
+      #timeline {
+        position: relative;
+        flex: 1;
+        height: 28px;
+        border-radius: 4px;
+        background: #2a3038;
+        cursor: pointer;
+      }
+      #played {
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 0;
+        border-radius: 4px 0 0 4px;
+        background: #2b3cff;
+        pointer-events: none;
+      }
+      #current-mark,
+      #preview-mark {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        pointer-events: none;
+      }
+      #current-mark {
+        background: #ffffff;
+      }
+      #preview-mark {
+        background: #4fc3f7;
+        display: none;
+      }
+      #readout {
+        width: 220px;
+        font-size: 12px;
+        font-variant-numeric: tabular-nums;
+        color: #c5d0dc;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <div id="header">Model Ghost Preview</div>
+      <div id="panel"></div>
+      <div id="transport">
+        <button id="play" type="button">Play</button>
+        <div id="timeline">
+          <div id="played"></div>
+          <div id="current-mark"></div>
+          <div id="preview-mark"></div>
+        </div>
+        <div id="readout"></div>
+      </div>
+    </div>
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>

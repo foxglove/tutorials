@@ -29,6 +29,10 @@ Below is a list of all tutorials available in this repository:
 - 🎥 [Video](https://youtu.be/jJej6aT1jKg)
 - 📊 [Visualize](https://app.foxglove.dev/~/view?ds=foxglove-sample-stream&ds.recordingId=vqKKQcot421Kwg84&ds.overrideLayoutId=b7513959-1d46-4a89-bc24-1584d9677ca1&ds.start=2023-09-01T13:19:45.047438263Z&ds.end=2023-09-01T13:20:15.047438263Z)
 
+## Foxglove Extensions
+### [Model Ghost Preview extension](extensions/model_ghost_preview/README.md)
+- 📝 Preview a 3D model as a ghost at the hovered timeline time, even while paused
+
 ## Foxglove SDK
 ### [Using Foxglove to Visualize Ethernet/IP data](foxglove_sdk/ethernet_ip_integration/README.md)
 - 📝 Using Foxglove data, it's easier than ever to stream time series data. In this project, we show you how.
