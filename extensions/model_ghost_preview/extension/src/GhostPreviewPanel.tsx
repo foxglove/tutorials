@@ -161,6 +161,7 @@ export function GhostPreviewPanel({ context }: { context: PanelExtensionContext 
     setLoading(true);
     setLoadError(undefined);
     setPoseCount(0);
+    setPoseRevision((value) => value + 1);
     setChildFrames([]);
 
     const unsubscribe = subscribe({

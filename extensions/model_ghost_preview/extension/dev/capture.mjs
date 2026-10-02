@@ -3,8 +3,10 @@ import path from "node:path";
 
 import puppeteer from "puppeteer-core";
 
-const url = process.argv[2] ?? "http://127.0.0.1:5173/";
-const mediaDir = path.resolve(process.argv[3] ?? "../../media");
+const late = process.argv.includes("--late");
+const args = process.argv.slice(2).filter((arg) => arg !== "--late");
+const url = args[0] ?? "http://127.0.0.1:5173/";
+const mediaDir = path.resolve(args[1] ?? "../../media");
 
 const browser = await puppeteer.launch({
   executablePath: "/usr/local/bin/google-chrome",
@@ -74,35 +76,37 @@ try {
   await panel.screenshot({ path: ghostPath });
   console.log("wrote", ghostPath);
 
-  const lateUrl = new URL(url);
-  lateUrl.searchParams.set("t", "34");
-  await page.goto(lateUrl.toString(), { waitUntil: "networkidle0", timeout: 60000 });
-  await page.waitForFunction(
-    () => {
-      const root = document.querySelector("[data-pose-count]");
-      if (!root) {
-        return false;
-      }
-      return (
-        root.getAttribute("data-loading") === "false" &&
-        Number(root.getAttribute("data-pose-count")) > 50
-      );
-    },
-    { timeout: 20000 },
-  );
-  await new Promise((resolve) => setTimeout(resolve, 400));
-  await dollyTowardTruck(page);
-  const latePanel = await page.$("#panel");
-  const lateTimeline = await page.$("#timeline");
-  const lateBox = await lateTimeline?.boundingBox();
-  if (!latePanel || !lateBox) {
-    throw new Error("Late-seek capture missing panel or timeline");
+  if (late) {
+    const lateUrl = new URL(url);
+    lateUrl.searchParams.set("t", "34");
+    await page.goto(lateUrl.toString(), { waitUntil: "networkidle0", timeout: 60000 });
+    await page.waitForFunction(
+      () => {
+        const root = document.querySelector("[data-pose-count]");
+        if (!root) {
+          return false;
+        }
+        return (
+          root.getAttribute("data-loading") === "false" &&
+          Number(root.getAttribute("data-pose-count")) > 50
+        );
+      },
+      { timeout: 20000 },
+    );
+    await new Promise((resolve) => setTimeout(resolve, 400));
+    await dollyTowardTruck(page);
+    const latePanel = await page.$("#panel");
+    const lateTimeline = await page.$("#timeline");
+    const lateBox = await lateTimeline?.boundingBox();
+    if (!latePanel || !lateBox) {
+      throw new Error("Late-seek capture missing panel or timeline");
+    }
+    await page.mouse.move(lateBox.x + lateBox.width * (24 / 40), lateBox.y + lateBox.height / 2);
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    const latePath = path.join(mediaDir, "late-ghost.png");
+    await latePanel.screenshot({ path: latePath });
+    console.log("wrote", latePath);
   }
-  await page.mouse.move(lateBox.x + lateBox.width * (24 / 40), lateBox.y + lateBox.height / 2);
-  await new Promise((resolve) => setTimeout(resolve, 500));
-  const latePath = "/tmp/late-ghost.png";
-  await latePanel.screenshot({ path: latePath });
-  console.log("wrote", latePath);
 } finally {
   await browser.close();
 }

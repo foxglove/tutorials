@@ -331,7 +331,7 @@ export class GhostScene {
       }
     }
     this.#fitGround(this.#pathPoints);
-    this.#pathLine = this.#syncFatLine(this.#pathLine, this.#pathPoints, path.color, 8, 0.15);
+    this.#pathLine = this.#syncFatLine(this.#pathLine, this.#pathPoints, path.color, 8, 0.15, 1);
     this.#requestRender();
   }
 
@@ -341,7 +341,7 @@ export class GhostScene {
         return;
       }
       this.#highlightKey = "";
-      this.#highlightLine = this.#syncFatLine(this.#highlightLine, [], highlight?.color ?? "#ffffff", 11, 0.22);
+      this.#highlightLine = this.#syncFatLine(this.#highlightLine, [], highlight?.color ?? "#ffffff", 11, 0.22, 2);
       this.#requestRender();
       return;
     }
@@ -363,7 +363,7 @@ export class GhostScene {
       );
     }
     const color = lighten(highlight.color);
-    this.#highlightLine = this.#syncFatLine(this.#highlightLine, points, color, 11, 0.22);
+    this.#highlightLine = this.#syncFatLine(this.#highlightLine, points, color, 11, 0.22, 2);
     this.#requestRender();
   }
 
@@ -598,6 +598,7 @@ export class GhostScene {
     color: string,
     width: number,
     lift: number,
+    renderOrder: number,
   ): FatLine | undefined {
     if (points.length < 2) {
       this.#removeFatLine(current);
@@ -609,6 +610,7 @@ export class GhostScene {
     if (current?.geometry === geometry) {
       current.material.color.set(hex);
       current.material.linewidth = width;
+      current.line.renderOrder = renderOrder;
       return current;
     }
     this.#removeFatLine(current);
@@ -623,7 +625,7 @@ export class GhostScene {
     });
     const line = new Line2(geometry, material);
     line.frustumCulled = false;
-    line.renderOrder = 1;
+    line.renderOrder = renderOrder;
     this.#scene.add(line);
     return { line, geometry, material };
   }
