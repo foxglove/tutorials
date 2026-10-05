@@ -6,3 +6,4 @@ data/*
 !data/README.md
 *.foxe
 scripts/.smoke
+.venv

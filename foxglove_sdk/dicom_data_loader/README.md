@@ -13,17 +13,18 @@ The loader publishes lung-window images, a 3D point cloud of bone and lung, a pl
 
 - Rust stable, with the `wasm32-unknown-unknown` target (`rustup target add wasm32-unknown-unknown`)
 - Node.js 18 or newer
-- Python 3, only for downloading the sample series
+- [uv](https://docs.astral.sh/uv/getting-started/installation/), only for downloading the sample series
 
 ## Download sample data
 
 Both series are public, CC BY 3.0, and hosted by the NCI Imaging Data Commons. The script uses the `idc-index` package. Nothing is committed to the repository.
 
+From this directory:
+
 ```bash
-pip install -r scripts/requirements.txt
-python scripts/download_sample_data.py --dataset chest      # one 133-slice chest CT, ~70 MB
-python scripts/download_sample_data.py --dataset breathing  # ten phases, ~750 MB
-python scripts/download_sample_data.py --dataset all
+uv run --directory scripts download_sample_data.py --dataset chest      # one 133-slice chest CT, ~70 MB
+uv run --directory scripts download_sample_data.py --dataset breathing  # ten phases, ~750 MB
+uv run --directory scripts download_sample_data.py --dataset all
 ```
 
 Files are written under `data/chest` and `data/breathing`. The breathing study is about 750 MB (ten phases, 142 slices each). From `rust/`, `cargo test --release` reads those two folders and skips a dataset when its folder is missing. `DICOM_DATA_DIR` overrides the parent directory.

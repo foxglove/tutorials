@@ -1,0 +1,11 @@
+[project]
+name = "dicom-sample-data"
+version = "0.1.0"
+description = "Download the public CT series used by the DICOM data loader tutorial"
+requires-python = ">=3.10"
+dependencies = [
+    "idc-index",
+]
+
+[tool.uv]
+package = false
