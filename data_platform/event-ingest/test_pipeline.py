@@ -70,11 +70,20 @@ assert posted[0]["metadata"]["source_recording_id"] == "rec_1"
 print(f"1 ingest.run -> 3 events, {len(s3.ranges)} range reads, "
       f"{sum(h - l + 1 for l, h in s3.ranges)} bytes")
 
-existing.append({"id": "evt_1"})
+assert [p["metadata"]["source_event_index"] for p in posted] == ["0", "1", "2"]
+existing.extend({"id": f"evt_{i}", "metadata": p["metadata"]} for i, p in enumerate(posted))
 before = len(posted)
 assert ingest.run("bkt", "a/b.mcap", "rec_1", "dev_1", "key", s3_client=s3) == 0
 assert len(posted) == before
 print("2 second run -> deduped, nothing created")
+
+# Partial failure: only event 0 landed before the worker died. The retry must
+# fill in 1 and 2, not treat the recording as done.
+del existing[1:]
+posted.clear()
+assert ingest.run("bkt", "a/b.mcap", "rec_1", "dev_1", "key", s3_client=s3) == 2
+assert [p["metadata"]["source_event_index"] for p in posted] == ["1", "2"]
+print("3 retry after partial failure -> missing events created")
 
 # ------------------------------------------------------------ handlers ----
 SECRET, sent, fetches = "s3cr3t", [], []
@@ -110,7 +119,7 @@ cases = [
     ("no location",          evt({"type": "recording.imported",
                                   "recording": {"id": "rec_2"}}),          200, 0),
 ]
-for i, (name, e, code, enqueued) in enumerate(cases, start=3):
+for i, (name, e, code, enqueued) in enumerate(cases, start=4):
     sent.clear()
     r = receiver.handler(e, None)
     assert r["statusCode"] == code, (name, r)
@@ -122,7 +131,7 @@ sent.clear()
 tampered = json.loads(json.dumps(IMPORTED)); tampered["recording"]["location"]["bucket"] = "evil"
 assert receiver.handler(evt(tampered, sig=sign(json.dumps(IMPORTED).encode())), None)["statusCode"] == 401
 assert sent == []
-print("9 receiver, tampered body -> 401, nothing enqueued")
+print("10 receiver, tampered body -> 401, nothing enqueued")
 
 worker = load("worker_handler", f"{HERE}/lambda/worker/handler.py")
 calls = []
@@ -131,13 +140,13 @@ worker.ingest = types.SimpleNamespace(run=lambda **kw: calls.append(kw))
 worker.handler({"Records": [{"body": json.dumps(
     {"recordingId": "rec_1", "deviceId": "dev_1", "bucket": "b", "key": "k"})}]}, None)
 assert len(calls) == 1 and calls[0]["recording_id"] == "rec_1", calls
-print("10 worker -> ingest.run called")
+print("11 worker -> ingest.run called")
 
 calls.clear()
 worker.handler({"Records": [{"body": json.dumps(
     {"recordingId": "rec_2", "deviceId": None, "bucket": "b", "key": "k"})}]}, None)
 assert calls == []
-print("11 worker, no device -> skipped")
+print("12 worker, no device -> skipped")
 
 # rotation without a cold start: change the secret, sign with the new one
 sent.clear()
@@ -145,6 +154,6 @@ SECRET = "rotated-token"
 new_sig = hmac.new(SECRET.encode(), json.dumps(IMPORTED).encode(), hashlib.sha256).hexdigest()
 r = receiver.handler(evt(IMPORTED, sig=new_sig), None)
 assert r["statusCode"] == 200 and len(sent) == 1, (r, sent)
-print("12 rotated token accepted without a cold start")
+print("13 rotated token accepted without a cold start")
 
 print("\nALL TESTS PASSED")

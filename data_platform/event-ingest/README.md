@@ -85,7 +85,7 @@ curl -s -H "Authorization: Bearer $FOXGLOVE_API_KEY" \
 python ingest_events.py <bucket> <key> <recording-id> <device-id>
 ```
 
-Run it twice. The second run prints `already ingested, nothing to do`.
+Run it twice. The second run prints `0 new events`.
 
 ## Deploy it
 
@@ -115,10 +115,8 @@ terraform plan
 terraform apply
 ```
 
-Check two values in the plan before approving: the account ID in the secret ARN, and the
-bucket name in the worker's IAM policy. Copying `terraform.tfvars-example` and forgetting
-to edit it produces a *clean* plan — the placeholders are well-formed strings, so
-Terraform can't tell they're fake.
+The Terraform rejects the placeholder values in `terraform.tfvars-example`, so
+`terraform plan` fails until you've filled in your bucket and secret ARNs.
 
 Run the worker in the **same region as the recordings bucket**.
 
@@ -177,9 +175,13 @@ terraform/           API Gateway, Lambdas, SQS + DLQ, alarm, IAM
   chunks holding the event topic. `ingest.py` wraps the object in a ~30-line file-like
   that implements `seek` and `readinto` over HTTP range requests.
 
-- **Idempotency.** Every created event carries `source_recording_id` in its metadata,
-  checked with one cheap query before any writes. Webhook retries, manual retries and
-  re-imports are all safe.
+- **Idempotency is per event.** Every created event carries `source_recording_id` and
+  `source_event_index` in its metadata. Each run lists the events already created for the
+  recording and writes only the missing indexes, so a retry after a partial failure fills
+  in the gaps instead of skipping the recording. Webhook retries, manual retries and
+  re-imports are all safe when they run one after another. Two deliveries of the same
+  recording that run *at the same time* can both pass the check and create duplicates; a
+  FIFO queue with the recording ID as `MessageDeduplicationId` closes that gap.
 
 - **Duplicate uploads are silently dropped.** Foxglove hashes content and refuses a
   recording whose hash matches one already imported for the same device. Renaming the
@@ -197,9 +199,9 @@ terraform/           API Gateway, Lambdas, SQS + DLQ, alarm, IAM
   `sec`/`nsec` field names rather than `seconds`/`nanos`. `schemaEncoding` from
   `GET /data/topics` tells you which you have.
 
-- **Don't force a cold start** with `terraform apply -replace=aws_lambda_function.receiver`.
-  Replacing the function destroys its resource-based policy, and Terraform won't recreate
-  `aws_lambda_permission` because that resource's own config hasn't changed — API Gateway
-  loses permission to invoke and every request returns 500. The receiver caches its secret
-  with a TTL and re-reads on a signature mismatch, so a rotated token takes effect without
-  one.
+- **Receiver deploys cause a few seconds of 500s.** Replacing a Lambda function destroys
+  its resource-based policy, so `aws_lambda_permission.apigw` is set to be recreated
+  whenever the receiver changes. Between the two steps API Gateway can't invoke the
+  function. Foxglove retries webhook deliveries, so nothing is lost. You also don't need a
+  cold start to pick up a rotated token: the receiver caches its secret with a TTL and
+  re-reads it on a signature mismatch.

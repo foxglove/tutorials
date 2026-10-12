@@ -12,6 +12,11 @@ variable "name_prefix" {
 variable "recordings_bucket" {
   description = "BYOS bucket holding the recordings. The worker is granted read-only access to it."
   type        = string
+
+  validation {
+    condition     = var.recordings_bucket != "your-byos-bucket"
+    error_message = "Set recordings_bucket in terraform.tfvars to your BYOS bucket."
+  }
 }
 
 variable "foxglove_api_key_secret_arn" {
@@ -21,11 +26,21 @@ variable "foxglove_api_key_secret_arn" {
     in state in plaintext.
   EOT
   type        = string
+
+  validation {
+    condition     = !strcontains(var.foxglove_api_key_secret_arn, "111122223333")
+    error_message = "Set foxglove_api_key_secret_arn in terraform.tfvars. The example value is a placeholder."
+  }
 }
 
 variable "webhook_secret_arn" {
   description = "ARN of an existing Secrets Manager secret holding the Foxglove webhook signing token."
   type        = string
+
+  validation {
+    condition     = !strcontains(var.webhook_secret_arn, "111122223333")
+    error_message = "Set webhook_secret_arn in terraform.tfvars. The example value is a placeholder."
+  }
 }
 
 variable "foxglove_api" {

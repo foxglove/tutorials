@@ -103,4 +103,12 @@ resource "aws_lambda_permission" "apigw" {
   function_name = aws_lambda_function.receiver.function_name
   principal     = "apigateway.amazonaws.com"
   source_arn    = "${aws_apigatewayv2_api.webhook.execution_arn}/*/*"
+
+  # Replacing the function destroys its resource-based policy, and this resource's
+  # own config doesn't change, so Terraform would not recreate it. Every receiver
+  # change now recreates the permission too: a few seconds of 500s per deploy,
+  # which webhook retries absorb.
+  lifecycle {
+    replace_triggered_by = [aws_lambda_function.receiver]
+  }
 }

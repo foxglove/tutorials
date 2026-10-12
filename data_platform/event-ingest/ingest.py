@@ -15,6 +15,8 @@ from mcap_protobuf.decoder import DecoderFactory
 API = os.environ.get("FOXGLOVE_API", "https://api.foxglove.dev/v1")
 EVENT_SCHEMA = "foxglove.Event"
 SOURCE_KEY = "source_recording_id"
+INDEX_KEY = "source_event_index"
+PAGE = 1000
 
 
 class S3File(io.RawIOBase):
@@ -66,14 +68,22 @@ def rfc3339(ts):
     return ts.ToDatetime().replace(tzinfo=timezone.utc).isoformat().replace("+00:00", "Z")
 
 
-def already_done(recording_id, device_id, api_key):
-    r = requests.get(
-        f"{API}/events", headers=_headers(api_key), timeout=30,
-        params={"deviceId": device_id, "queryFields": "metadata",
-                "query": f"{SOURCE_KEY}:{recording_id}", "limit": 1},
-    )
-    r.raise_for_status()
-    return len(r.json()) > 0
+def existing_indexes(recording_id, device_id, api_key):
+    """Indexes of the events already created for this recording, across all pages."""
+    seen, offset = set(), 0
+    while True:
+        r = requests.get(
+            f"{API}/events", headers=_headers(api_key), timeout=30,
+            params={"deviceId": device_id, "queryFields": "metadata",
+                    "query": f"{SOURCE_KEY}:{recording_id}",
+                    "limit": PAGE, "offset": offset},
+        )
+        r.raise_for_status()
+        page = r.json()
+        seen.update(e.get("metadata", {}).get(INDEX_KEY) for e in page)
+        if len(page) < PAGE:
+            return seen
+        offset += PAGE
 
 
 def open_recording(bucket, key, client=None):
@@ -89,11 +99,8 @@ def event_topics(reader):
 
 
 def run(bucket, key, recording_id, device_id, api_key, s3_client=None):
-    """Returns the number of events created. Idempotent per recording."""
-    if already_done(recording_id, device_id, api_key):
-        print(f"{recording_id}: already ingested, nothing to do")
-        return 0
-
+    """Returns the number of events created. Idempotent per event: a retry after
+    a partial failure creates only the events that are missing."""
     reader = open_recording(bucket, key, s3_client)
     topics = event_topics(reader)
     if not topics:
@@ -101,17 +108,22 @@ def run(bucket, key, recording_id, device_id, api_key, s3_client=None):
         return 0
     print(f"{recording_id}: event topics {topics}")
 
+    existing = existing_indexes(recording_id, device_id, api_key)
     created = 0
-    for _, _, _, proto in reader.iter_decoded_messages(topics=topics):
+    for i, (_, _, _, proto) in enumerate(reader.iter_decoded_messages(topics=topics)):
+        if str(i) in existing:
+            continue
         metadata = {kv.key: kv.value for kv in proto.metadata}
         r = requests.post(
             f"{API}/events", headers=_headers(api_key), timeout=30,
             json={"deviceId": device_id,
                   "start": rfc3339(proto.start_time),
                   "end": rfc3339(proto.end_time),
-                  "metadata": {**metadata, SOURCE_KEY: recording_id}},
+                  "metadata": {**metadata, SOURCE_KEY: recording_id,
+                               INDEX_KEY: str(i)}},
         )
         r.raise_for_status()
         created += 1
         print(f"  created {r.json()['id']} {metadata}")
+    print(f"{recording_id}: {created} new events")
     return created
