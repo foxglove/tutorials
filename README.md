@@ -4,6 +4,10 @@ This repository contains a collection of [Foxglove](https://foxglove.dev/) tutor
 
 Below is a list of all tutorials available in this repository:
 
+## Data Platform
+### [Create Foxglove events from foxglove.Event messages in MCAP](data_platform/event-ingest/README.md)
+- 📝 A webhook-driven pipeline that reads each newly imported recording out of your own bucket and turns its foxglove.Event messages into Foxglove events.
+
 ## Datasets
 ### [Foxglove Visualization for 1X World Model Challenge](datasets/1x_eve/README.md)
 - 📝 Use Foxglove to visualize 1X World Model Challenge

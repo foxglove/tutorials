@@ -1,0 +1,16 @@
+# Terraform state and variables - never commit these
+.terraform/
+.terraform.lock.hcl
+*.tfstate
+*.tfstate.*
+terraform.tfvars
+backend.tfvars
+crash.log
+
+# Build artifacts
+build/
+__pycache__/
+*.pyc
+
+# Generated sample recording
+*.mcap
