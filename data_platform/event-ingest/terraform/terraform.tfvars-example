@@ -1,5 +1,4 @@
-region            = "us-west-2"
-recordings_bucket = "your-byos-bucket"
+region = "us-west-2"
 
 # Create these secrets first, outside Terraform:
 #   aws secretsmanager create-secret --name foxglove/api-key      --secret-string "fox_sk_..."

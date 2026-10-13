@@ -78,20 +78,18 @@ def handler(event, context):
         return {"statusCode": 200, "body": "ignored"}
 
     rec = payload.get("recording") or {}
-    loc = rec.get("location") or {}
     recording_id = rec.get("id")
-
-    if not loc.get("bucket") or not loc.get("path"):
-        # Query-optimized site, or not imported yet: no object to read.
-        print(f"{recording_id}: no location on recording, nothing to do")
-        return {"statusCode": 200, "body": "no location"}
-
     device_id = (rec.get("device") or {}).get("id")
+
+    if not device_id:
+        # POST /events requires a device, and a retry will not attach one.
+        # Drop it here rather than cycle it through the queue to the DLQ.
+        print(f"{recording_id}: no device on recording, skipping")
+        return {"statusCode": 200, "body": "no device"}
+
     sqs.send_message(QueueUrl=QUEUE_URL, MessageBody=json.dumps({
         "recordingId": recording_id,
         "deviceId": device_id,
-        "bucket": loc["bucket"],
-        "key": loc["path"],
     }))
-    print(f"{recording_id}: queued bucket={loc['bucket']} key={loc['path']} device={device_id}")
+    print(f"{recording_id}: queued device={device_id}")
     return {"statusCode": 200, "body": "queued"}

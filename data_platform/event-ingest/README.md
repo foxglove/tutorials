@@ -1,6 +1,6 @@
 ---
 title: Create Foxglove events from foxglove.Event messages in MCAP
-short_description: A webhook-driven pipeline that reads each newly imported recording out of your own bucket and turns its foxglove.Event messages into Foxglove events.
+short_description: A webhook-driven pipeline that reads each newly imported recording through the Foxglove API and turns its foxglove.Event messages into Foxglove events.
 ---
 
 # Create Foxglove events from `foxglove.Event` messages in MCAP
@@ -9,21 +9,23 @@ If your stack already publishes `foxglove.Event` messages into its MCAP files, t
 messages are just data on a topic — Foxglove does not read them during indexing, so
 nothing appears on the timeline.
 
-This pipeline closes that gap. It fires on the `recording.imported` webhook, range-reads
-the new recording directly from your own bucket, and creates one Foxglove event per
+This pipeline closes that gap. It fires on the `recording.imported` webhook, asks the
+Foxglove API for just the recording's event topics, and creates one Foxglove event per
 message it finds.
 
 ```
 recording.imported webhook
   -> API Gateway -> receiver Lambda    verify HMAC, enqueue, return 200
   -> SQS (+ DLQ)
-  -> worker Lambda                     range-read the MCAP, create events
+  -> worker Lambda                     GET /data/topics
+                                       POST /data/stream, download the signed link
+                                       GET + POST /events
 ```
 
-Assumes Foxglove Cloud with [bring-your-own-storage](https://docs.foxglove.dev/docs/data/primary-sites/foxglove-managed-setup).
-The recording is already in storage you control, so the worker reads it in place rather
-than asking Foxglove to stream it back. It never downloads the file: against the sample
-recording it issues four HTTP range requests and transfers only the bytes it needs.
+Works on Foxglove-hosted and [bring-your-own-storage](https://docs.foxglove.dev/docs/data/primary-sites/foxglove-managed-setup)
+sites alike, with one Foxglove API key and no access to your storage bucket. The worker
+never downloads the whole recording: the stream endpoint returns a small MCAP holding only
+the event topics.
 
 ## Dependencies
 
@@ -41,7 +43,7 @@ Deploying also needs the [AWS CLI](https://docs.aws.amazon.com/cli/) and
 
 ## Run it once, locally
 
-You need a BYOS primary site and a Foxglove API key with event write access.
+You need a Foxglove API key that can read data and create events.
 
 **1. Generate a sample recording.**
 
@@ -52,24 +54,20 @@ python write_events.py
 Events are stamped at the current time, so every run produces a content-distinct file.
 That matters — see the note on duplicates below.
 
-**2. Upload it with identity metadata.**
+**2. Upload it to a device** in Foxglove, the same way you upload any recording.
+
+On a bring-your-own-storage site, a file dropped straight into the bucket carries no
+identity: without [object metadata](https://docs.foxglove.dev/docs/data/primary-sites/manage-data#object-metadata)
+it fails to index with `No projectId could be determined from the provided identifiers`,
+and no webhook ever fires. Set the metadata in the same operation as the write:
 
 ```bash
 aws s3 cp sample_events.mcap s3://<bucket>/<device>/sample_events.mcap \
   --metadata foxglove_device_name=<device>,foxglove_project_id=<project-id>
 ```
 
-The metadata is required. A file dropped into a BYOS bucket carries no identity, so
-without it the recording fails to index with `No projectId could be determined from the
-provided identifiers`, and no webhook ever fires. `foxglove_device_name` creates the
-device if it doesn't exist. Set the metadata in the same operation as the write — added
-afterwards, Foxglove may read the object first.
-
-For production, set an ingest path policy on the site so uploaders don't have to
-remember.
-
 **3. Wait for indexing**, which is asynchronous and gives no progress feedback. Then
-grab the recording ID, device ID and `location`:
+grab the recording ID and device ID:
 
 ```bash
 export FOXGLOVE_API_KEY="fox_sk_..."
@@ -82,7 +80,7 @@ curl -s -H "Authorization: Bearer $FOXGLOVE_API_KEY" \
 **4. Run the pipeline.**
 
 ```bash
-python ingest_events.py <bucket> <key> <recording-id> <device-id>
+python ingest_events.py <recording-id> <device-id>
 ```
 
 Run it twice. The second run prints `0 new events`.
@@ -115,10 +113,8 @@ terraform plan
 terraform apply
 ```
 
-The Terraform rejects the placeholder values in `terraform.tfvars-example`, so
-`terraform plan` fails until you've filled in your bucket and secret ARNs.
-
-Run the worker in the **same region as the recordings bucket**.
+The Terraform rejects the placeholder secret ARNs in `terraform.tfvars-example`, so
+`terraform plan` fails until you've filled in your own.
 
 **3. Point the webhook** at the `webhook_url` output, subscribed to `recording.imported`.
 
@@ -138,9 +134,7 @@ into an AWS-side one and a Foxglove-side one.
 A 500 *with* Lambda logs is a code error. A 500 with no logs means the function never
 ran — routing or invoke permission.
 
-Then upload a recording and watch the worker log. A run against the three-event sample
-takes about 1.28s and peaks at 111 MB of a 512 MB allocation, with a 722 ms cold start.
-Recording size barely moves those numbers.
+Then upload a recording and watch the worker log for `3 new events`.
 
 ## Tests
 
@@ -148,9 +142,10 @@ Recording size barely moves those numbers.
 python3 test_pipeline.py
 ```
 
-Twelve offline tests: the pipeline end to end against a fake S3 that only serves range
-reads, signature verification including a tampered body, and the worker's handling of a
-recording with no device. No AWS, no network.
+Sixteen offline tests: the pipeline end to end against a fake Foxglove API, including a
+retry after a partial failure and event keys that survive the stream reordering messages,
+signature verification including a tampered body, and the handling of a recording with no
+device. No AWS, no network.
 
 ## Layout
 
@@ -170,14 +165,15 @@ terraform/           API Gateway, Lambdas, SQS + DLQ, alarm, IAM
   `foxglove.Event` schema, so `/events`, `/robot/events` and `/diagnostics/markers` all
   work with no configuration.
 
-- **Seekable reads are required**, not an optimization. `get_object()["Body"]` is
-  forward-only and the MCAP reader queries the file twice — the summary section, then the
-  chunks holding the event topic. `ingest.py` wraps the object in a ~30-line file-like
-  that implements `seek` and `readinto` over HTTP range requests.
+- **The signed link expires 15 seconds after it is issued.** `POST /data/stream` returns
+  a link, not data. Request it and download it in the same step; a retry requests a new
+  link. Don't send the API key to the signed link.
 
 - **Idempotency is per event.** Every created event carries `source_recording_id` and
-  `source_event_index` in its metadata. Each run lists the events already created for the
-  recording and writes only the missing indexes, so a retry after a partial failure fills
+  `source_event_key` in its metadata. The key is topic, log time and an occurrence count,
+  not the message's position, because the stream endpoint regenerates the MCAP on every
+  call and same-timestamp events can come back in either order. Each run lists the events
+  already created for the recording and writes only the missing keys, so a retry after a partial failure fills
   in the gaps instead of skipping the recording. Webhook retries, manual retries and
   re-imports are all safe when they run one after another. Two deliveries of the same
   recording that run *at the same time* can both pass the check and create duplicates; a
@@ -189,11 +185,12 @@ terraform/           API Gateway, Lambdas, SQS + DLQ, alarm, IAM
   is a line under **Import Errors** in the app — which is also where quarantined files
   go, and the first place to look when a recording seems to have vanished.
 
-- **No device, no events.** `POST /events` requires one. A recording without a device is
-  skipped and logged rather than retried.
+- **No device, no events.** `POST /events` requires one. The receiver logs and drops a
+  recording without a device rather than queueing it, since a retry can't add one.
 
-- **Archived objects.** A lifecycle policy that moves objects to a cold tier will break
-  the range read. Handle or exclude them before running a backfill over old recordings.
+- **Keeping data in your own account.** On a bring-your-own-storage site, the worker could
+  read the MCAP straight from your bucket instead, which keeps the data path inside your
+  cloud account at the cost of an IAM grant and BYOS-only support.
 
 - **Protobuf only.** A JSON-encoded `foxglove.Event` hits a different decoder and the
   `sec`/`nsec` field names rather than `seconds`/`nanos`. `schemaEncoding` from

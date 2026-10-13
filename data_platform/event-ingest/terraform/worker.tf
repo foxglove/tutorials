@@ -40,15 +40,6 @@ resource "aws_iam_role_policy" "worker" {
         Resource = aws_sqs_queue.work.arn
       },
       {
-        # Read-only, and only this bucket. Foxglove's own grant is separate.
-        Effect = "Allow"
-        Action = ["s3:GetObject", "s3:ListBucket"]
-        Resource = [
-          "arn:aws:s3:::${var.recordings_bucket}",
-          "arn:aws:s3:::${var.recordings_bucket}/*",
-        ]
-      },
-      {
         Effect   = "Allow"
         Action   = ["secretsmanager:GetSecretValue"]
         Resource = var.foxglove_api_key_secret_arn

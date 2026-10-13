@@ -9,7 +9,8 @@ mkdir -p build/receiver build/worker
 # Receiver needs nothing beyond the runtime - boto3 is provided by Lambda.
 cp lambda/receiver/handler.py build/receiver/
 
-# Worker gets the handler, the shared pipeline, and the MCAP stack.
+# Worker gets the handler, the shared pipeline, and the MCAP stack. mcap pulls in
+# lz4 and zstandard, which cover the stream endpoint's chunk compression.
 # --platform/--only-binary keeps the wheels manylinux so they load on Lambda
 # even when you build on a Mac.
 cp lambda/worker/handler.py ingest.py build/worker/

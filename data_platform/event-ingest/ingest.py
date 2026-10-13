@@ -1,13 +1,14 @@
-"""Read foxglove.Event messages from an MCAP in S3 and create Foxglove events.
+"""Turn the foxglove.Event messages in a recording into Foxglove events.
 
-Shared by the local CLI and the Lambda worker so there is one implementation.
+Reads the data through the Foxglove API, so it works on Foxglove-hosted and
+bring-your-own-storage sites alike. Shared by the local CLI and the Lambda
+worker so there is one implementation.
 """
 
 import io
 import os
 from datetime import timezone
 
-import boto3
 import requests
 from mcap.reader import make_reader
 from mcap_protobuf.decoder import DecoderFactory
@@ -15,49 +16,8 @@ from mcap_protobuf.decoder import DecoderFactory
 API = os.environ.get("FOXGLOVE_API", "https://api.foxglove.dev/v1")
 EVENT_SCHEMA = "foxglove.Event"
 SOURCE_KEY = "source_recording_id"
-INDEX_KEY = "source_event_index"
-PAGE = 1000
-
-
-class S3File(io.RawIOBase):
-    """Seekable file-like over an S3 object, backed by HTTP range requests.
-
-    The MCAP reader asks the file two separate questions: the summary section
-    at the end, then the chunks holding the topic we want. A streaming body
-    from get_object() only goes forward, so the second query fails with
-    "cannot use more than one query against a non-seeking data source".
-    """
-
-    def __init__(self, client, bucket, key):
-        self._client, self._bucket, self._key = client, bucket, key
-        self._pos = 0
-        self._size = client.head_object(Bucket=bucket, Key=key)["ContentLength"]
-
-    def readable(self): return True
-    def seekable(self): return True
-    def tell(self): return self._pos
-
-    def seek(self, offset, whence=io.SEEK_SET):
-        if whence == io.SEEK_SET:
-            self._pos = offset
-        elif whence == io.SEEK_CUR:
-            self._pos += offset
-        elif whence == io.SEEK_END:
-            self._pos = self._size + offset
-        self._pos = max(0, min(self._pos, self._size))
-        return self._pos
-
-    def readinto(self, b):
-        if self._pos >= self._size:
-            return 0
-        end = min(self._pos + len(b), self._size) - 1
-        body = self._client.get_object(
-            Bucket=self._bucket, Key=self._key, Range=f"bytes={self._pos}-{end}"
-        )["Body"].read()
-        n = len(body)
-        b[:n] = body
-        self._pos += n
-        return n
+EVENT_KEY = "source_event_key"
+PAGE = 2000  # maximum limit for GET /events
 
 
 def _headers(api_key):
@@ -65,11 +25,61 @@ def _headers(api_key):
 
 
 def rfc3339(ts):
-    return ts.ToDatetime().replace(tzinfo=timezone.utc).isoformat().replace("+00:00", "Z")
+    return ts.ToDatetime(tzinfo=timezone.utc).isoformat().replace("+00:00", "Z")
 
 
-def existing_indexes(recording_id, device_id, api_key):
-    """Indexes of the events already created for this recording, across all pages."""
+def event_topics(recording_id, api_key):
+    """Topics carrying foxglove.Event, selected by schema name, not topic name."""
+    r = requests.get(
+        f"{API}/data/topics", headers=_headers(api_key), timeout=30,
+        params={"recordingId": recording_id, "includeSchemas": "true"},
+    )
+    r.raise_for_status()
+    return [t["topic"] for t in r.json() if t.get("schemaName") == EVENT_SCHEMA]
+
+
+def fetch_events_mcap(recording_id, topics, api_key):
+    """A small MCAP holding only the event topics.
+
+    The signed link expires 15 seconds after it is issued, so request it and
+    download it in the same step. A retry requests a fresh link.
+    """
+    r = requests.post(
+        f"{API}/data/stream", headers=_headers(api_key), timeout=30,
+        json={"recordingId": recording_id, "topics": topics, "outputFormat": "mcap"},
+    )
+    r.raise_for_status()
+    data = requests.get(r.json()["link"], timeout=60)  # signed: no auth header
+    data.raise_for_status()
+    return make_reader(io.BytesIO(data.content), decoder_factories=[DecoderFactory()])
+
+
+def keyed_events(messages):
+    """Pair each event message with a key that is stable across runs.
+
+    The stream endpoint regenerates the MCAP on every call, so a message's
+    position in it is not a stable identity: two events with the same log time
+    can come back in either order. The key is topic, log time, and an
+    occurrence count, assigned after sorting by content, so the same message
+    gets the same key on every run. Messages that tie on all three are
+    byte-identical, so swapping them changes nothing.
+    """
+    ordered = sorted(messages, key=lambda m: (m[1].topic, m[2].log_time, m[2].data))
+    seen, keyed = {}, []
+    for _, channel, message, proto in ordered:
+        base = f"{channel.topic}:{message.log_time}"
+        n = seen.get(base, 0)
+        seen[base] = n + 1
+        keyed.append((f"{base}:{n}", proto))
+    return keyed
+
+
+def existing_keys(recording_id, device_id, api_key):
+    """Keys of the events already created for this recording, across all pages.
+
+    GET /events has no recording filter, so this is a metadata query scoped to
+    the device.
+    """
     seen, offset = set(), 0
     while True:
         r = requests.get(
@@ -80,38 +90,27 @@ def existing_indexes(recording_id, device_id, api_key):
         )
         r.raise_for_status()
         page = r.json()
-        seen.update(e.get("metadata", {}).get(INDEX_KEY) for e in page)
+        seen.update((e.get("metadata") or {}).get(EVENT_KEY) for e in page)
         if len(page) < PAGE:
             return seen
         offset += PAGE
 
 
-def open_recording(bucket, key, client=None):
-    raw = S3File(client or boto3.client("s3"), bucket, key)
-    return make_reader(io.BufferedReader(raw, buffer_size=1024 * 1024),
-                       decoder_factories=[DecoderFactory()])
-
-
-def event_topics(reader):
-    summary = reader.get_summary()
-    return [ch.topic for ch in summary.channels.values()
-            if summary.schemas[ch.schema_id].name == EVENT_SCHEMA]
-
-
-def run(bucket, key, recording_id, device_id, api_key, s3_client=None):
+def run(recording_id, device_id, api_key):
     """Returns the number of events created. Idempotent per event: a retry after
     a partial failure creates only the events that are missing."""
-    reader = open_recording(bucket, key, s3_client)
-    topics = event_topics(reader)
+    topics = event_topics(recording_id, api_key)
     if not topics:
-        print(f"{recording_id}: no {EVENT_SCHEMA} channel, nothing to do")
+        print(f"{recording_id}: no {EVENT_SCHEMA} topic, nothing to do")
         return 0
     print(f"{recording_id}: event topics {topics}")
 
-    existing = existing_indexes(recording_id, device_id, api_key)
+    reader = fetch_events_mcap(recording_id, topics, api_key)
+    messages = keyed_events(reader.iter_decoded_messages(topics=topics))
+    existing = existing_keys(recording_id, device_id, api_key)
     created = 0
-    for i, (_, _, _, proto) in enumerate(reader.iter_decoded_messages(topics=topics)):
-        if str(i) in existing:
+    for key, proto in messages:
+        if key in existing:
             continue
         metadata = {kv.key: kv.value for kv in proto.metadata}
         r = requests.post(
@@ -120,7 +119,7 @@ def run(bucket, key, recording_id, device_id, api_key, s3_client=None):
                   "start": rfc3339(proto.start_time),
                   "end": rfc3339(proto.end_time),
                   "metadata": {**metadata, SOURCE_KEY: recording_id,
-                               INDEX_KEY: str(i)}},
+                               EVENT_KEY: key}},
         )
         r.raise_for_status()
         created += 1
