@@ -29,8 +29,8 @@ def webhook_secret(force_refresh=False):
     """Cached with a TTL, and refreshable on demand.
 
     Caching forever means a rotated token is not picked up until the container
-    is recycled, which tempts you into replacing the function to force a cold
-    start - and that destroys its resource-based policy.
+    is recycled. With a TTL, and a fresh read on a signature mismatch, rotating
+    the token never needs a redeploy.
     """
     global _secret, _secret_fetched_at
     expired = (time.time() - _secret_fetched_at) > SECRET_TTL_SECONDS

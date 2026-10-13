@@ -9,9 +9,8 @@ If your stack already publishes `foxglove.Event` messages into its MCAP files, t
 messages are just data on a topic. Foxglove does not read them during indexing, so
 nothing appears on the timeline.
 
-This pipeline closes that gap. It fires on the `recording.imported` webhook, asks the
-Foxglove API for just the recording's event topics, and creates one Foxglove event per
-message it finds.
+This pipeline fires on the `recording.imported` webhook, asks the Foxglove API for just
+the recording's event topics, and creates one Foxglove event per message it finds.
 
 ```
 recording.imported webhook
@@ -28,10 +27,9 @@ deployment in `terraform/` is one worked example on AWS (API Gateway and Lambda 
 receiver, SQS for the queue, Lambda for the worker). On GCP, Cloud Run and Pub/Sub fill
 the same roles, and on Azure, Functions and Queue Storage do.
 
-Works on Foxglove-hosted and [bring-your-own-storage](https://docs.foxglove.dev/docs/data/primary-sites/foxglove-managed-setup)
-sites alike, with one Foxglove API key and no access to your storage bucket. The worker
-never downloads the whole recording: the stream endpoint returns a small MCAP holding only
-the event topics.
+It works on Foxglove-hosted and [bring-your-own-storage](https://docs.foxglove.dev/docs/data/primary-sites/foxglove-managed-setup)
+sites with one Foxglove API key and no access to your storage bucket. The worker
+downloads only a small MCAP holding the event topics, not the whole recording.
 
 ## Dependencies
 
@@ -54,7 +52,14 @@ Terraform state.
 
 ## Run it once, locally
 
-You need a Foxglove API key that can read data and create events.
+You need a Foxglove API key, created by an organization admin under **Settings → API
+keys**, with these capabilities:
+
+- `data.topics.list`, to find the recording's event topics
+- `data.stream`, to fetch those topics
+- `events.list`, to check which events already exist
+- `events.create`, to create the new ones
+- `recordings.list`, only for looking up recording IDs by hand in step 3
 
 **1. Generate a sample recording.**
 
@@ -122,7 +127,7 @@ Terraform, because a secret passed as a variable ends up in state in plaintext.
 
 ```bash
 aws secretsmanager create-secret --name foxglove/api-key \
-  --secret-string "fox_sk_..." --query ARN --output text
+  --secret-string "$FOXGLOVE_API_KEY" --query ARN --output text
 aws secretsmanager create-secret --name foxglove/webhook-token \
   --secret-string "<token from the webhook>" --query ARN --output text
 ```
@@ -158,14 +163,14 @@ curl -i -X POST "$(terraform output -raw webhook_url)" \
 ```
 
 `401 invalid signature` is the success case. That one call proves routing, invoke
-permission, the secret read and HMAC verification, so every later problem splits cleanly
-into an AWS-side one and a Foxglove-side one.
+permission, the secret read and HMAC verification all work. If a later upload creates no
+events, look at the webhook configuration or the worker, not the receiver.
 
 A 500 *with* Lambda logs is a code error. A 500 with no logs means the function never
 ran, so it's routing or invoke permission.
 
-Then generate a fresh sample with `python write_events.py`, upload it, and watch the
-worker log for `3 new events`:
+Then generate a fresh sample with `python ../write_events.py` (you're still in
+`terraform/`), upload it, and watch the worker log for `3 new events`:
 
 ```bash
 aws logs tail "$(terraform output -raw worker_log_group)" --follow
@@ -208,9 +213,9 @@ terraform/           AWS example: API Gateway, Lambdas, SQS + DLQ, alarm, IAM
   `source_event_key` in its metadata. The key is topic, log time and an occurrence count,
   not the message's position, because the stream endpoint regenerates the MCAP on every
   call and same-timestamp events can come back in either order. Each run lists the events
-  already created for the recording and writes only the missing keys, so a retry after a partial failure fills
-  in the gaps instead of skipping the recording. Webhook retries and manual retries
-  are safe when they run one after another. Two deliveries of the same
+  already created for the recording and writes only the missing keys, so a retry after a
+  partial failure fills in the gaps instead of skipping the recording. Webhook retries and
+  manual retries are safe when they run one after another. Two deliveries of the same
   recording that run *at the same time* can both pass the check and create duplicates; a
   FIFO queue with the recording ID as `MessageDeduplicationId` closes that gap.
 
@@ -225,14 +230,14 @@ terraform/           AWS example: API Gateway, Lambdas, SQS + DLQ, alarm, IAM
 
 - **Keeping data in your own account.** On a bring-your-own-storage site, the worker could
   read the MCAP straight from your bucket instead, which keeps the data path inside your
-  cloud account at the cost of an IAM grant and BYOS-only support.
+  cloud account at the cost of a storage permission grant and BYOS-only support.
 
 - **Protobuf only.** The worker reads `schemaEncoding` from `GET /data/topics` and skips
   any JSON-encoded `foxglove.Event` topic with a log line, so the protobuf events in the
   same recording are still created. Supporting JSON events needs a JSON decoder and the
   `sec`/`nsec` field names rather than `seconds`/`nanos`.
 
-- **Receiver deploys cause a few seconds of 500s.** Replacing a Lambda function destroys
+- **Receiver deploys cause a few seconds of 500s (AWS example).** Replacing a Lambda function destroys
   its resource-based policy, so `aws_lambda_permission.apigw` is set to be recreated
   whenever the receiver changes. Between the two steps API Gateway can't invoke the
   function. Foxglove retries webhook deliveries, so nothing is lost. You also don't need a

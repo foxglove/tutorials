@@ -6,7 +6,7 @@ cd "$(dirname "$0")"
 rm -rf build
 mkdir -p build/receiver build/worker
 
-# Receiver needs nothing beyond the runtime - boto3 is provided by Lambda.
+# Receiver needs nothing beyond the runtime, since Lambda provides boto3.
 cp lambda/receiver/handler.py build/receiver/
 
 # Worker gets the handler, the shared pipeline, and the MCAP stack. mcap pulls in

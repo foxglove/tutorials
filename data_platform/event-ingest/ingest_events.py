@@ -3,7 +3,7 @@
 
     python ingest_events.py <recording_id> <device_id>
 
-Same code the Lambda worker runs - both call ingest.run().
+Same code the Lambda worker runs: both call ingest.run().
 """
 
 import os
