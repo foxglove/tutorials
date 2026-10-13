@@ -6,7 +6,7 @@ short_description: A webhook-driven pipeline that reads each newly imported reco
 # Create Foxglove events from `foxglove.Event` messages in MCAP
 
 If your stack already publishes `foxglove.Event` messages into its MCAP files, those
-messages are just data on a topic — Foxglove does not read them during indexing, so
+messages are just data on a topic. Foxglove does not read them during indexing, so
 nothing appears on the timeline.
 
 This pipeline closes that gap. It fires on the `recording.imported` webhook, asks the
@@ -15,12 +15,18 @@ message it finds.
 
 ```
 recording.imported webhook
-  -> API Gateway -> receiver Lambda    verify HMAC, enqueue, return 200
-  -> SQS (+ DLQ)
-  -> worker Lambda                     GET /data/topics
-                                       POST /data/stream, download the signed link
-                                       GET + POST /events
+  -> receiver     verify HMAC, enqueue, return 200
+  -> queue (+ dead-letter queue)
+  -> worker       GET /data/topics
+                  POST /data/stream, download the signed link
+                  GET + POST /events
 ```
+
+Nothing here depends on a particular cloud: the worker only talks to the Foxglove API.
+`ingest.py` is the whole pipeline, and you can run it by hand with no cloud at all. The
+deployment in `terraform/` is one worked example on AWS (API Gateway and Lambda for the
+receiver, SQS for the queue, Lambda for the worker). On GCP, Cloud Run and Pub/Sub fill
+the same roles, and on Azure, Functions and Queue Storage do.
 
 Works on Foxglove-hosted and [bring-your-own-storage](https://docs.foxglove.dev/docs/data/primary-sites/foxglove-managed-setup)
 sites alike, with one Foxglove API key and no access to your storage bucket. The worker
@@ -29,17 +35,22 @@ the event topics.
 
 ## Dependencies
 
-Python 3.12+, and an AWS account if you want to deploy it.
+Python 3.12+, and an AWS account if you want to deploy the AWS example. Install into a virtual
+environment; many systems refuse a system-wide `pip install`, and `build.sh` needs `pip`
+too.
 
 ```bash
+python3 -m venv .venv
+source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
 That pulls `mcap`, `mcap-protobuf-support`, `requests`, `boto3`, and `foxglove-sdk`
 (the last only to generate the sample recording).
 
-Deploying also needs the [AWS CLI](https://docs.aws.amazon.com/cli/) and
-[Terraform](https://developer.hashicorp.com/terraform/install).
+Deploying also needs the [AWS CLI](https://docs.aws.amazon.com/cli/),
+[Terraform](https://developer.hashicorp.com/terraform/install) 1.5+, and an S3 bucket for
+Terraform state.
 
 ## Run it once, locally
 
@@ -52,19 +63,29 @@ python write_events.py
 ```
 
 Events are stamped at the current time, so every run produces a content-distinct file.
-That matters — see the note on duplicates below.
+That matters; see the note on duplicates below.
 
 **2. Upload it to a device** in Foxglove, the same way you upload any recording.
 
 On a bring-your-own-storage site, a file dropped straight into the bucket carries no
 identity: without [object metadata](https://docs.foxglove.dev/docs/data/primary-sites/manage-data#object-metadata)
 it fails to index with `No projectId could be determined from the provided identifiers`,
-and no webhook ever fires. Set the metadata in the same operation as the write:
+and no webhook ever fires. Set the metadata in the same operation as the write. On AWS:
 
 ```bash
 aws s3 cp sample_events.mcap s3://<bucket>/<device>/sample_events.mcap \
   --metadata foxglove_device_name=<device>,foxglove_project_id=<project-id>
 ```
+
+On Google Cloud:
+
+```bash
+gcloud storage cp sample_events.mcap gs://<bucket>/<device>/sample_events.mcap \
+  --custom-metadata=foxglove_device_name=<device>,foxglove_project_id=<project-id>
+```
+
+The [Cloud CLI uploads](https://docs.foxglove.dev/docs/data/primary-sites/manage-data#cloud-cli-uploads)
+docs cover Azure too.
 
 **3. Wait for indexing**, which is asynchronous and gives no progress feedback. Then
 grab the recording ID and device ID:
@@ -87,19 +108,23 @@ Run it twice. The second run prints `0 new events`.
 
 ## Deploy it
 
+On any platform, the deployment needs a secret store for the API key and signing token, a
+queue visibility timeout well above the worker's timeout, a cap on worker concurrency, and
+a dead-letter queue with an alarm. The steps below deploy the AWS example.
+
 Create the webhook **before** deploying. There's a circular dependency: Terraform needs
 the signing token, Foxglove only reveals it at creation, and creating a webhook needs a
 URL Terraform hasn't produced yet. Create it against a placeholder URL, take the token,
 deploy, then edit the webhook to the real endpoint.
 
 **1. Put the secrets in Secrets Manager.** They are deliberately created outside
-Terraform — a secret passed as a variable ends up in state in plaintext.
+Terraform, because a secret passed as a variable ends up in state in plaintext.
 
 ```bash
 aws secretsmanager create-secret --name foxglove/api-key \
-  --secret-string "fox_sk_..."
+  --secret-string "fox_sk_..." --query ARN --output text
 aws secretsmanager create-secret --name foxglove/webhook-token \
-  --secret-string "<token from the webhook>"
+  --secret-string "<token from the webhook>" --query ARN --output text
 ```
 
 **2. Build and apply.**
@@ -107,8 +132,9 @@ aws secretsmanager create-secret --name foxglove/webhook-token \
 ```bash
 ./build.sh
 cd terraform
-cp terraform.tfvars-example terraform.tfvars   # then edit it
-terraform init
+cp backend.tfvars-example backend.tfvars       # your state bucket
+cp terraform.tfvars-example terraform.tfvars   # your region and the two ARNs
+terraform init -backend-config=backend.tfvars
 terraform plan
 terraform apply
 ```
@@ -116,14 +142,18 @@ terraform apply
 The Terraform rejects the placeholder secret ARNs in `terraform.tfvars-example`, so
 `terraform plan` fails until you've filled in your own.
 
-**3. Point the webhook** at the `webhook_url` output, subscribed to `recording.imported`.
+**3. Point the webhook** at the `webhook_url` output, subscribed to `recording.imported`:
+
+```bash
+terraform output -raw webhook_url
+```
 
 ## Verify it
 
 Start with a health check that doesn't involve Foxglove:
 
 ```bash
-curl -i -X POST https://<api-id>.execute-api.<region>.amazonaws.com/webhook \
+curl -i -X POST "$(terraform output -raw webhook_url)" \
   -H 'content-type: application/json' -d '{"type":"ping"}'
 ```
 
@@ -132,9 +162,14 @@ permission, the secret read and HMAC verification, so every later problem splits
 into an AWS-side one and a Foxglove-side one.
 
 A 500 *with* Lambda logs is a code error. A 500 with no logs means the function never
-ran — routing or invoke permission.
+ran, so it's routing or invoke permission.
 
-Then upload a recording and watch the worker log for `3 new events`.
+Then generate a fresh sample with `python write_events.py`, upload it, and watch the
+worker log for `3 new events`:
+
+```bash
+aws logs tail "$(terraform output -raw worker_log_group)" --follow
+```
 
 ## Tests
 
@@ -154,9 +189,9 @@ ingest.py            the pipeline. One implementation, used by the CLI and the w
 ingest_events.py     run it once by hand
 write_events.py      generate a sample recording
 test_pipeline.py     offline tests
-build.sh             package the Lambdas
-lambda/              receiver and worker handlers
-terraform/           API Gateway, Lambdas, SQS + DLQ, alarm, IAM
+build.sh             package the Lambdas (AWS example)
+lambda/              receiver and worker handlers (AWS example)
+terraform/           AWS example: API Gateway, Lambdas, SQS + DLQ, alarm, IAM
 ```
 
 ## Notes
@@ -182,7 +217,7 @@ terraform/           API Gateway, Lambdas, SQS + DLQ, alarm, IAM
 - **Duplicate uploads are silently dropped.** Foxglove hashes content and refuses a
   recording whose hash matches one already imported for the same device. Renaming the
   object doesn't help. The recording never appears, no webhook fires, and the only trace
-  is a line under **Import Errors** in the app — which is also where quarantined files
+  is a line under **Import Errors** in the app, which is also where quarantined files
   go, and the first place to look when a recording seems to have vanished.
 
 - **No device, no events.** `POST /events` requires one. The receiver logs and drops a
