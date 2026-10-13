@@ -209,8 +209,8 @@ terraform/           AWS example: API Gateway, Lambdas, SQS + DLQ, alarm, IAM
   not the message's position, because the stream endpoint regenerates the MCAP on every
   call and same-timestamp events can come back in either order. Each run lists the events
   already created for the recording and writes only the missing keys, so a retry after a partial failure fills
-  in the gaps instead of skipping the recording. Webhook retries, manual retries and
-  re-imports are all safe when they run one after another. Two deliveries of the same
+  in the gaps instead of skipping the recording. Webhook retries and manual retries
+  are safe when they run one after another. Two deliveries of the same
   recording that run *at the same time* can both pass the check and create duplicates; a
   FIFO queue with the recording ID as `MessageDeduplicationId` closes that gap.
 
@@ -227,9 +227,10 @@ terraform/           AWS example: API Gateway, Lambdas, SQS + DLQ, alarm, IAM
   read the MCAP straight from your bucket instead, which keeps the data path inside your
   cloud account at the cost of an IAM grant and BYOS-only support.
 
-- **Protobuf only.** A JSON-encoded `foxglove.Event` hits a different decoder and the
-  `sec`/`nsec` field names rather than `seconds`/`nanos`. `schemaEncoding` from
-  `GET /data/topics` tells you which you have.
+- **Protobuf only.** The worker reads `schemaEncoding` from `GET /data/topics` and skips
+  any JSON-encoded `foxglove.Event` topic with a log line, so the protobuf events in the
+  same recording are still created. Supporting JSON events needs a JSON decoder and the
+  `sec`/`nsec` field names rather than `seconds`/`nanos`.
 
 - **Receiver deploys cause a few seconds of 500s.** Replacing a Lambda function destroys
   its resource-based policy, so `aws_lambda_permission.apigw` is set to be recreated

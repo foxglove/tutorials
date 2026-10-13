@@ -29,13 +29,27 @@ def rfc3339(ts):
 
 
 def event_topics(recording_id, api_key):
-    """Topics carrying foxglove.Event, selected by schema name, not topic name."""
+    """Protobuf topics carrying foxglove.Event, selected by schema name, not topic name.
+
+    The worker only has a protobuf decoder. A JSON-encoded event topic would make
+    the whole recording fail on every retry, including its protobuf events, so
+    those topics are skipped and logged instead.
+    """
     r = requests.get(
         f"{API}/data/topics", headers=_headers(api_key), timeout=30,
         params={"recordingId": recording_id, "includeSchemas": "true"},
     )
     r.raise_for_status()
-    return [t["topic"] for t in r.json() if t.get("schemaName") == EVENT_SCHEMA]
+    topics = []
+    for t in r.json():
+        if t.get("schemaName") != EVENT_SCHEMA:
+            continue
+        if t.get("schemaEncoding") != "protobuf":
+            print(f"{recording_id}: skipping {t['topic']}, "
+                  f"{t.get('schemaEncoding')} encoding is not supported")
+            continue
+        topics.append(t["topic"])
+    return topics
 
 
 def fetch_events_mcap(recording_id, topics, api_key):

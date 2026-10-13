@@ -37,7 +37,10 @@ class FakeAPI:
     LINK = "https://signed.example/stream.mcap?sig=abc"
 
     def __init__(self):
-        self.topics = [{"topic": "/events", "schemaName": "foxglove.Event"},
+        self.topics = [{"topic": "/events", "schemaName": "foxglove.Event",
+                        "schemaEncoding": "protobuf"},
+                       {"topic": "/json_events", "schemaName": "foxglove.Event",
+                        "schemaEncoding": "jsonschema"},
                        {"topic": "/camera", "schemaName": "foxglove.RawImage"}]
         self.existing, self.posted, self.streamed = [], [], []
 
@@ -76,7 +79,7 @@ expected_start = datetime.fromtimestamp(BASE, timezone.utc).isoformat().replace(
 assert posted[0]["start"] == expected_start, posted[0]
 assert posted[0]["metadata"]["name"] == "pick_attempt"
 assert posted[0]["metadata"]["source_recording_id"] == "rec_1"
-print(f"1 ingest.run -> 3 events, streamed only {api.streamed[0]}")
+print(f"1 ingest.run -> 3 events, streamed only {api.streamed[0]} (JSON event topic skipped)")
 
 keys = [p["metadata"]["source_event_key"] for p in posted]
 assert len(set(keys)) == 3 and all(k.startswith("/events:") for k in keys), keys
