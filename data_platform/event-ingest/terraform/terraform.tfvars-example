@@ -1,0 +1,12 @@
+region = "us-west-2"
+
+# Create these secrets first, outside Terraform:
+#   aws secretsmanager create-secret --name foxglove/api-key      --secret-string "fox_sk_..."
+#   aws secretsmanager create-secret --name foxglove/webhook-token --secret-string "..."
+foxglove_api_key_secret_arn = "arn:aws:secretsmanager:us-west-2:111122223333:secret:foxglove/api-key-AbCdEf"
+webhook_secret_arn          = "arn:aws:secretsmanager:us-west-2:111122223333:secret:foxglove/webhook-token-AbCdEf"
+
+tags = {
+  owner   = "your-name"
+  purpose = "foxglove-event-ingest"
+}

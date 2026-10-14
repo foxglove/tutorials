@@ -1,0 +1,6 @@
+mcap
+mcap-protobuf-support
+requests
+boto3
+# only needed to generate the sample recording:
+foxglove-sdk
