@@ -48,7 +48,12 @@ That pulls `mcap`, `mcap-protobuf-support`, `requests`, `boto3`, and `foxglove-s
 
 Deploying also needs the [AWS CLI](https://docs.aws.amazon.com/cli/),
 [Terraform](https://developer.hashicorp.com/terraform/install) 1.5+, and an S3 bucket for
-Terraform state.
+Terraform state. Keep it separate from any bucket Foxglove reads recordings from, or
+Foxglove will try to index the state file. To create one:
+
+```bash
+aws s3 mb s3://<your-state-bucket> --region <region>
+```
 
 ## Run it once, locally
 
@@ -61,16 +66,25 @@ keys**, with these capabilities:
 - `events.create`, to create the new ones
 - `recordings.list`, only for looking up recording IDs by hand in step 3
 
+They're in the Recordings, Topics, Stream and Events sections of the dialog.
+
 **1. Generate a sample recording.**
 
 ```bash
 python write_events.py
 ```
 
-Events are stamped at the current time, so every run produces a content-distinct file.
+The recording is 30 seconds long: three events on `/events`, and a status line every
+second on `/status`, which the pipeline ignores. Events are stamped at the current time,
+so every run produces a content-distinct file.
 That matters; see the note on duplicates below.
 
-**2. Upload it to a device** in Foxglove, the same way you upload any recording.
+**2. Upload it to a device.** If Foxglove stores your recordings, upload it in the app,
+or with the [Foxglove CLI](https://docs.foxglove.dev/docs/data/recordings#actions):
+
+```bash
+foxglove upload sample_events.mcap --device-id <device-id>
+```
 
 On a bring-your-own-storage site, a file dropped straight into the bucket carries no
 identity: without [object metadata](https://docs.foxglove.dev/docs/data/primary-sites/manage-data#object-metadata)
@@ -90,7 +104,8 @@ gcloud storage cp sample_events.mcap gs://<bucket>/<device>/sample_events.mcap \
 ```
 
 The [Cloud CLI uploads](https://docs.foxglove.dev/docs/data/primary-sites/manage-data#cloud-cli-uploads)
-docs cover Azure too.
+docs cover Azure too. For `<device>`, use an existing device or a new name (Foxglove
+creates it), and find `<project-id>` under **Settings → Projects**.
 
 **3. Wait for indexing**, which is asynchronous and gives no progress feedback. Then
 grab the recording ID and device ID:
@@ -100,8 +115,12 @@ export FOXGLOVE_API_KEY="fox_sk_..."
 export FOXGLOVE_API="https://api.foxglove.dev/v1"
 
 curl -s -H "Authorization: Bearer $FOXGLOVE_API_KEY" \
-  "$FOXGLOVE_API/recordings?limit=3&sortBy=createdAt&sortOrder=desc"
+  "$FOXGLOVE_API/recordings?limit=3&sortBy=createdAt&sortOrder=desc" \
+  | python3 -c 'import json, sys; [print(r["path"], r["id"], (r.get("device") or {}).get("id")) for r in json.load(sys.stdin)]'
 ```
+
+Each line is a recent recording: path, recording ID (`rec_...`), device ID (`dev_...`).
+A device ID of `None` means the recording isn't on a device.
 
 **4. Run the pipeline.**
 
@@ -119,16 +138,19 @@ a dead-letter queue with an alarm. The steps below deploy the AWS example.
 
 Create the webhook **before** deploying. There's a circular dependency: Terraform needs
 the signing token, Foxglove only reveals it at creation, and creating a webhook needs a
-URL Terraform hasn't produced yet. Create it against a placeholder URL, take the token,
+URL Terraform hasn't produced yet. Create it against a placeholder URL such as
+`https://example.com/webhook`, take the token,
 deploy, then edit the webhook to the real endpoint.
 
 **1. Put the secrets in Secrets Manager.** They are deliberately created outside
-Terraform, because a secret passed as a variable ends up in state in plaintext.
+Terraform, because a secret passed as a variable ends up in state in plaintext. Use one
+region for everything: these secrets, `region` in `terraform.tfvars`, and the log commands
+below.
 
 ```bash
-aws secretsmanager create-secret --name foxglove/api-key \
+aws secretsmanager create-secret --name foxglove/api-key --region <region> \
   --secret-string "$FOXGLOVE_API_KEY" --query ARN --output text
-aws secretsmanager create-secret --name foxglove/webhook-token \
+aws secretsmanager create-secret --name foxglove/webhook-token --region <region> \
   --secret-string "<token from the webhook>" --query ARN --output text
 ```
 
@@ -137,20 +159,27 @@ aws secretsmanager create-secret --name foxglove/webhook-token \
 ```bash
 ./build.sh
 cd terraform
-cp backend.tfvars-example backend.tfvars       # your state bucket
-cp terraform.tfvars-example terraform.tfvars   # your region and the two ARNs
+cp -n backend.tfvars-example backend.tfvars       # your state bucket
+cp -n terraform.tfvars-example terraform.tfvars   # your region and the two ARNs
 terraform init -backend-config=backend.tfvars
 terraform plan
 terraform apply
 ```
 
+Before `terraform init`, edit the two copies. In `backend.tfvars`, set `bucket` to your
+state bucket. In `terraform.tfvars`, paste the `foxglove/api-key` ARN into
+`foxglove_api_key_secret_arn` and the `foxglove/webhook-token` ARN into
+`webhook_secret_arn`, and set `region` to the region in those ARNs. `terraform apply` asks
+you to type `yes`.
+
 The Terraform rejects the placeholder secret ARNs in `terraform.tfvars-example`, so
 `terraform plan` fails until you've filled in your own.
 
-**3. Point the webhook** at the `webhook_url` output, subscribed to `recording.imported`:
+**3. Point the webhook** at the `webhook_url` output, subscribed to `recording.imported`.
+Copy the URL from between the quotes:
 
 ```bash
-terraform output -raw webhook_url
+terraform output webhook_url
 ```
 
 ## Verify it
@@ -167,13 +196,19 @@ permission, the secret read and HMAC verification all work. If a later upload cr
 events, look at the webhook configuration or the worker, not the receiver.
 
 A 500 *with* Lambda logs is a code error. A 500 with no logs means the function never
-ran, so it's routing or invoke permission.
-
-Then generate a fresh sample with `python ../write_events.py` (you're still in
-`terraform/`), upload it, and watch the worker log for `3 new events`:
+ran, so it's routing or invoke permission. Check the receiver's logs with:
 
 ```bash
-aws logs tail "$(terraform output -raw worker_log_group)" --follow
+aws logs tail "$(terraform output -raw receiver_log_group)" --since 15m --region <region>
+```
+
+Then generate a fresh sample under a new file name (you're still in `terraform/`), upload
+it, and watch the worker log for `3 new events`. On a bring-your-own-storage site, a new
+file name keeps you from overwriting the file behind your first recording.
+
+```bash
+python ../write_events.py sample_events-2.mcap
+aws logs tail "$(terraform output -raw worker_log_group)" --follow --region <region>
 ```
 
 ## Tests

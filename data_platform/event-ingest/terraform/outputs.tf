@@ -15,3 +15,8 @@ output "dlq_url" {
 output "worker_log_group" {
   value = aws_cloudwatch_log_group.worker.name
 }
+
+output "receiver_log_group" {
+  description = "Check this first when the health check returns a 500."
+  value       = aws_cloudwatch_log_group.receiver.name
+}

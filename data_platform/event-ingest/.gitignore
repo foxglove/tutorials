@@ -1,10 +1,12 @@
-# Terraform state and variables - never commit these
+# Terraform state, variables and local overrides: never commit these
 .terraform/
 .terraform.lock.hcl
 *.tfstate
 *.tfstate.*
 terraform.tfvars
 backend.tfvars
+override.tf
+*_override.tf
 crash.log
 
 # Build artifacts
